@@ -1,0 +1,2876 @@
+<?php
+session_start();
+
+// Check if user is logged in as admin
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header("Location: Login.html");
+    exit();
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin Dashboard</title>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Bootstrap Icons CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- Mobile Responsive CSS -->
+    <link href="mobile_responsive.css" rel="stylesheet" />
+    <style>
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: #f8f9fa;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            z-index: 1050;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .sidebar .nav-link {
+            color: #495057;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .sidebar .nav-link:hover {
+            background-color: #e9ecef;
+        }
+        .sidebar .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .sidebar .navbar-brand {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #007bff;
+        }
+
+        /* Mobile Sidebar Overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+            display: none;
+        }
+        .sidebar-overlay.show {
+            display: block;
+        }
+
+        /* Mobile responsive improvements */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 280px;
+                height: 100vh;
+                position: fixed;
+                top: 0;
+                left: -280px;
+                background-color: #f8f9fa;
+                padding: 20px;
+                box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+                transition: left 0.3s ease;
+                z-index: 1050;
+                overflow-y: auto;
+            }
+            .sidebar.show {
+                left: 0;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            /* Mobile header improvements */
+            .main-content header {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+
+            /* Mobile table improvements */
+            .table-responsive {
+                border: none;
+            }
+
+            /* Mobile form improvements */
+            .card .row > .col-md-6 {
+                margin-bottom: 1rem;
+            }
+
+            /* Mobile button improvements */
+            .btn-group, .d-flex {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+
+            /* Mobile filter improvements */
+            .d-flex.flex-wrap {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .d-flex.flex-wrap .form-control,
+            .d-flex.flex-wrap .form-select,
+            .d-flex.flex-wrap .btn {
+                margin-bottom: 0.5rem;
+                width: 100%;
+            }
+
+            /* Mobile card improvements */
+            .card-body .row {
+                --bs-gutter-x: 0.5rem;
+            }
+
+            /* Mobile modal improvements */
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+
+            /* Mobile chart improvements */
+            .mt-4 canvas {
+                max-height: 300px;
+            }
+
+            /* Mobile navigation tabs */
+            .nav-tabs .nav-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.875rem;
+            }
+
+            /* Mobile statistics cards */
+            .row.text-center .col-md-3 {
+                margin-bottom: 1rem;
+            }
+
+            /* Mobile action buttons */
+            .d-grid {
+                gap: 0.5rem;
+            }
+
+            /* Mobile notification dropdown */
+            .dropdown-menu {
+                min-width: 250px;
+            }
+        }
+
+        /* Touch-friendly buttons on mobile */
+        @media (max-width: 768px) and (pointer: coarse) {
+            .btn {
+                min-height: 44px;
+                padding: 0.75rem 1rem;
+            }
+
+            .nav-link {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+
+            .form-control, .form-select {
+                min-height: 44px;
+            }
+        }
+
+        /* Improve mobile scrolling */
+        @media (max-width: 768px) {
+            body {
+                overflow-x: hidden;
+            }
+
+            .sidebar-open body {
+                overflow: hidden;
+            }
+        }
+    </style>
+</head>
+<body class="d-flex">
+    <div class="sidebar">
+        <a class="navbar-brand" href="#">Admin Dashboard</a>
+        <ul class="nav flex-column" id="sidebarTabs">
+            <li class="nav-item">
+                <a href="#" class="nav-link active" id="userManagementTab">User Management</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="systemSettingsTab">System Settings</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="reportsAnalyticsTab">Reports & Analytics</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="examOversightTab">Exam Oversight</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="globalCheatingAnalyticsTab">Global Cheating Analytics</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="auditLogsTab">Audit Logs</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="backupRestoreTab">Backup/Restore</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="proctorManagementTab">Proctor Management</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="globalExamControlsTab">Global Exam Controls</a>
+            </li>
+        </ul>
+        <div class="mt-auto">
+            <a href="Login.html" class="btn btn-outline-danger w-100">Logout</a>
+        </div>
+    </div>
+    <div class="main-content flex-grow-1">
+        <div class="container my-4">
+        <header class="bg-primary text-white p-3 rounded mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-light d-md-none me-2" id="sidebarToggle">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <h1 class="mb-0">Admin Dashboard</h1>
+                    <div class="dropdown">
+                        <button class="btn btn-light position-relative" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-bell"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">0</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" id="notificationList">
+                            <li><h6 class="dropdown-header">Notifications</h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-center" href="#" id="viewAllNotifications">View All Notifications</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <!-- User Management Section -->
+            <section class="container my-4 section-content" id="userManagementSection">
+                <h2>User Management</h2>
+                <p>Manage users, roles, and permissions.</p>
+
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <button class="btn btn-success" id="addUserBtn">Add User</button>
+                        <button class="btn btn-danger" id="bulkDeleteBtn" disabled>Delete Selected</button>
+                        <button class="btn btn-secondary" id="bulkRoleChangeBtn" disabled>Change Role for Selected</button>
+                        <button class="btn btn-warning" id="bulkStatusChangeBtn" disabled>Change Status for Selected</button>
+                    </div>
+                    <div class="d-flex">
+                        <input type="text" id="searchInput" class="form-control me-2" placeholder="Search users...">
+                        <select id="filterRole" class="form-select me-2" aria-label="Filter by Role">
+                            <option value="all" selected>All Roles</option>
+                            <option value="student">Student</option>
+                            <option value="proctor">Proctor</option>
+                        </select>
+                        <select id="filterStatus" class="form-select" aria-label="Filter by Status">
+                            <option value="all" selected>All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <table class="table table-striped" id="userTable">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllUsers"></th>
+                            <th>Student No</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- User rows will be dynamically loaded here -->
+                    </tbody>
+                </table>
+
+                <!-- Add/Edit User Modal -->
+                <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form id="userForm" class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="userModalLabel">Add/Edit User</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <input type="hidden" id="userStudentNo" name="studentNo" />
+                                <div class="mb-3">
+                                    <label for="userName" class="form-label">Name</label>
+                                    <input type="text" class="form-control" id="userName" name="name" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="userEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="userEmail" name="email" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="userRole" class="form-label">Role</label>
+                                    <select class="form-select" id="userRole" name="role" required>
+                                        <option value="student">Student</option>
+                                        <option value="proctor">Proctor</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="userPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="userPassword" name="password" />
+                                    <small class="form-text text-muted">Leave blank to keep current password.</small>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary" id="saveUserBtn">Save</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Settings Section -->
+            <section class="container my-4 border p-3 rounded section-content" id="systemSettingsSection" style="display: none;">
+                <h2>System Settings</h2>
+                <p>Configure system preferences and settings.</p>
+
+                <form id="systemSettingsForm">
+                    <!-- Exam Defaults -->
+                    <div class="card shadow-sm p-3 mb-3">
+                        <h5 class="card-title">Exam Defaults</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="defaultExamDuration" class="form-label">Default Exam Duration (minutes)</label>
+                                <input type="number" class="form-control" id="defaultExamDuration" name="default_exam_duration" min="1" max="480" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="cheatingThreshold" class="form-label">Cheating Detection Threshold</label>
+                                <input type="number" class="form-control" id="cheatingThreshold" name="cheating_detection_threshold" step="0.1" min="0" max="1" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Policies -->
+                    <div class="card shadow-sm p-3 mb-3">
+                        <h5 class="card-title">User Policies</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="passwordMinLength" class="form-label">Password Minimum Length</label>
+                                <input type="number" class="form-control" id="passwordMinLength" name="password_min_length" min="4" max="50" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="sessionTimeout" class="form-label">Session Timeout (minutes)</label>
+                                <input type="number" class="form-control" id="sessionTimeout" name="session_timeout" min="5" max="480" required>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="passwordRequireSpecial" name="password_require_special">
+                                    <label class="form-check-label" for="passwordRequireSpecial">
+                                        Require Special Characters in Password
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Settings -->
+                    <div class="card shadow-sm p-3 mb-3">
+                        <h5 class="card-title">Notification Settings</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="emailAlertCheating" name="email_alert_cheating">
+                                    <label class="form-check-label" for="emailAlertCheating">
+                                        Email Alerts for Cheating Incidents
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="emailAlertExamClosure" name="email_alert_exam_closure">
+                                    <label class="form-check-label" for="emailAlertExamClosure">
+                                        Email Alerts for Exam Closures
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button type="button" class="btn btn-warning" id="resetToDefaultsBtn">Reset to Defaults</button>
+                            <button type="button" class="btn btn-info" id="previewChangesBtn">Preview Changes</button>
+                        </div>
+                        <button type="submit" class="btn btn-success" id="saveSettingsBtn">Save Settings</button>
+                    </div>
+                </form>
+
+                <!-- Preview Modal -->
+                <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="previewModalLabel">Preview Changes</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body" id="previewContent">
+                                <!-- Preview content will be populated here -->
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-success" id="confirmSaveBtn">Confirm Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports & Analytics Section -->
+            <section class="container my-4 border p-3 rounded section-content" id="reportsAnalyticsSection" style="display: none;">
+                <h2>Reports & Analytics</h2>
+                <ul class="nav nav-tabs mb-3" id="reportsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="systemResultsTab" data-bs-toggle="tab" data-bs-target="#systemResults" type="button" role="tab" aria-controls="systemResults" aria-selected="true">System-Wide Results</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="cheatingAnalyticsTab" data-bs-toggle="tab" data-bs-target="#cheatingAnalytics" type="button" role="tab" aria-controls="cheatingAnalytics" aria-selected="false">Cheating Analytics</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="additionalReportsTab" data-bs-toggle="tab" data-bs-target="#additionalReports" type="button" role="tab" aria-controls="additionalReports" aria-selected="false">Additional Admin Reports</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="reportsTabsContent">
+                    <!-- System-Wide Results Tab -->
+                    <div class="tab-pane fade show active" id="systemResults" role="tabpanel" aria-labelledby="systemResultsTab">
+                        <div class="mb-3 d-flex flex-wrap gap-3 align-items-center">
+                            <label for="filterSubject" class="form-label mb-0">Filter by Subject:</label>
+                            <select id="filterSubject" class="form-select w-auto">
+                                <option value="all" selected>All Subjects</option>
+                            </select>
+
+                            <label for="filterStartDate" class="form-label mb-0">Start Date:</label>
+                            <input type="date" id="filterStartDate" class="form-control w-auto" />
+
+                            <label for="filterEndDate" class="form-label mb-0">End Date:</label>
+                            <input type="date" id="filterEndDate" class="form-control w-auto" />
+
+                            <button id="applyFiltersBtn" class="btn btn-primary">Apply Filters</button>
+                            <button id="exportCsvBtn" class="btn btn-secondary">Export CSV</button>
+                            <button id="exportPdfBtn" class="btn btn-secondary">Export PDF</button>
+                        </div>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-striped table-hover" id="systemResultsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Student No</th>
+                                        <th>Name</th>
+                                        <th>Subject</th>
+                                        <th>Section</th>
+                                        <th>Score</th>
+                                        <th>Average Score</th>
+                                        <th>Exam Count</th>
+                                        <th>Date Taken</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data rows will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Cheating Analytics Tab -->
+                    <div class="tab-pane fade" id="cheatingAnalytics" role="tabpanel" aria-labelledby="cheatingAnalyticsTab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Cheating Analytics Overview</h5>
+                            <button id="refreshCheatingAnalyticsBtn" class="btn btn-primary btn-sm">Refresh</button>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="card bg-danger text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Total Incidents</h6>
+                                        <h3 id="totalCheatingIncidents">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <div class="card">
+                                    <div class="card-header">
+                                        Recent Cheating Incidents
+                                    </div>
+                                    <ul class="list-group list-group-flush" id="recentCheatingList" style="max-height: 250px; overflow-y: auto;">
+                                        <!-- Recent incidents will be listed here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-3">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">Top Cheating Students</div>
+                                    <ul class="list-group list-group-flush" id="topCheatingStudentsList">
+                                        <!-- Top students will be listed here -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">Top Cheating Exams</div>
+                                    <ul class="list-group list-group-flush" id="topCheatingExamsList">
+                                        <!-- Top exams will be listed here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="cheatingAlert" class="alert alert-warning mt-3 d-none" role="alert">
+                            <strong>New Cheating Detected!</strong> A new cheating incident has been recorded. Please refresh the analytics to see the latest data.
+                        </div>
+                    </div>
+
+                    <!-- Additional Admin Reports Tab -->
+                    <div class="tab-pane fade" id="additionalReports" role="tabpanel" aria-labelledby="additionalReportsTab">
+                        <div class="mb-3 d-flex flex-wrap gap-3 align-items-center">
+                            <label for="chartStartDate" class="form-label mb-0">Start Date:</label>
+                            <input type="date" id="chartStartDate" class="form-control w-auto" />
+
+                            <label for="chartEndDate" class="form-label mb-0">End Date:</label>
+                            <input type="date" id="chartEndDate" class="form-control w-auto" />
+
+                            <button id="applyChartFiltersBtn" class="btn btn-primary">Apply Filters</button>
+                        </div>
+                        <canvas id="userActivityChart" height="150"></canvas>
+                        <canvas id="examCompletionChart" height="150" class="mt-4"></canvas>
+                        <canvas id="systemPerformanceChart" height="150" class="mt-4"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Exam Oversight Section -->
+            <section class="container my-4 border p-3 rounded section-content" id="examOversightSection" style="display: none;">
+                <h2>Exam Oversight</h2>
+                <p>Admin-level exam management and oversight.</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div id="examOversightSpinner" class="spinner-border text-primary d-none" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <button id="refreshExamOversightBtn" class="btn btn-primary btn-sm">Refresh</button>
+                </div>
+                <div id="examOversightError" class="alert alert-danger d-none" role="alert"></div>
+                <div id="examOversightOffline" class="alert alert-warning d-none" role="alert">
+                    
+                    You are offline. Data may not be up to date. <button class="btn btn-sm btn-warning" onclick="retryLoadExamOversight()">Retry</button>
+                </div>
+                
+                <div class="card shadow-sm p-3">
+                    <h5 class="card-title">Ongoing Exams</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="examOversightTable">
+                            <thead>
+                                <tr>
+                                    <th>Exam ID</th>
+                                    <th>Title</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Students Taking</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Exams will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card shadow-sm p-3 mt-3">
+                    <h5 class="card-title">Exam Policies</h5>
+                    <p class="card-text">Set and manage exam policies.</p>
+                    <button class="btn btn-secondary">Manage Policies</button>
+                </div>
+            </section>
+
+            <!-- Global Cheating Analytics Section -->
+            <section class="container my-4 border p-3 rounded section-content" id="globalCheatingAnalyticsSection" style="display: none;">
+                <h2>Global Cheating Analytics</h2>
+                <p>Comprehensive analytics on cheating incidents across all exams.</p>
+                <div id="globalCheatingSpinner" class="spinner-border text-primary d-none" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div id="globalCheatingError" class="alert alert-danger d-none" role="alert"></div>
+                <div id="globalCheatingOffline" class="alert alert-warning d-none" role="alert">
+                    You are offline. Data may not be up to date. <button class="btn btn-sm btn-warning" onclick="retryLoadGlobalCheatingAnalytics()">Retry</button>
+                </div>
+                <div id="globalCheatingTrends"></div>
+                <div id="globalCheatingPrevention"></div>
+            </section>
+
+            <!-- Audit Logs Section -->
+            <section class="container my-4 border p-3 rounded section-content" id="auditLogsSection" style="display: none;">
+    <h2>Audit Logs</h2>
+    <p>Review system audit logs for security and compliance.</p>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div id="auditLogsSpinner" class="spinner-border text-primary d-none" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <button id="refreshAuditLogsBtn" class="btn btn-primary btn-sm">Refresh</button>
+    </div>
+    <div id="auditLogsError" class="alert alert-danger d-none" role="alert"></div>
+    <div id="auditLogsOffline" class="alert alert-warning d-none" role="alert">
+        You are offline. Data may not be up to date. <button class="btn btn-sm btn-warning" onclick="retryLoadAuditLogs()">Retry</button>
+    </div>
+    <div class="card shadow-sm p-3 mb-3">
+        <h5 class="card-title">Filters</h5>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label for="auditStartDate" class="form-label">Start Date</label>
+                <input type="date" id="auditStartDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="auditEndDate" class="form-label">End Date</label>
+                <input type="date" id="auditEndDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="auditUserFilter" class="form-label">User</label>
+                <input type="text" id="auditUserFilter" class="form-control" placeholder="Filter by user">
+            </div>
+            <div class="col-md-3">
+                <label for="auditActionFilter" class="form-label">Action</label>
+                <select id="auditActionFilter" class="form-select">
+                    <option value="">All Actions</option>
+                    <option value="LOGIN">Login</option>
+                    <option value="LOGOUT">Logout</option>
+                    <option value="CREATE_EXAM">Create Exam</option>
+                    <option value="DELETE_EXAM">Delete Exam</option>
+                    <option value="UPDATE_EXAM">Update Exam</option>
+                    <option value="START_EXAM">Start Exam</option>
+                    <option value="SUBMIT_EXAM">Submit Exam</option>
+                    <option value="CHEATING_DETECTED">Cheating Detected</option>
+                    <option value="USER_CREATED">User Created</option>
+                    <option value="USER_DELETED">User Deleted</option>
+                    <option value="SETTINGS_CHANGED">Settings Changed</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div id="auditLogsContainer"></div>
+    <div id="auditLogsPagination" class="mt-3"></div>
+</section>
+
+            <!-- Backup/Restore Section -->
+            <section class="container my-4 border p-3 rounded section-content" id="backupRestoreSection" style="display: none;">
+                <h2>Backup/Restore</h2>
+                <p>Manage database backups and restores.</p>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Create Backup</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">Create a full backup of the database.</p>
+                                <button class="btn btn-success" id="createBackupBtn">Create Backup</button>
+                                <div id="backupStatus" class="mt-2 d-none">
+                                    <div class="alert alert-info" role="alert">
+                                        <span id="backupMessage">Creating backup...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Restore Database</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">Restore database from a backup file.</p>
+                                <form id="restoreForm" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <label for="backupFile" class="form-label">Select Backup File</label>
+                                        <input type="file" class="form-control" id="backupFile" name="backup_file" accept=".sql,.zip" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-warning" id="restoreBtn">Restore Database</button>
+                                </form>
+                                <div id="restoreStatus" class="mt-2 d-none">
+                                    <div class="alert alert-info" role="alert">
+                                        <span id="restoreMessage">Restoring database...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Backup History</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="backupHistoryTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date Created</th>
+                                        <th>File Name</th>
+                                        <th>Size</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Backup history will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Proctor Management Section -->
+            <section class="container my-4 border p-3 rounded section-content" id="proctorManagementSection" style="display: none;">
+                <h2>Proctor Management</h2>
+                <p>Manage proctors and their exam assignments.</p>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <button class="btn btn-success" id="addProctorBtn">Add Proctor</button>
+                        <button class="btn btn-info" id="assignExamBtn" disabled>Assign Exam</button>
+                    </div>
+                    <div class="d-flex">
+                        <input type="text" id="proctorSearchInput" class="form-control me-2" placeholder="Search proctors...">
+                        <select id="proctorStatusFilter" class="form-select">
+                            <option value="all" selected>All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Proctors</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="proctorTable">
+                                        <thead>
+                                            <tr>
+                                                <th><input type="checkbox" id="selectAllProctors"></th>
+                                                <th>Student No</th>
+                                                <th>Name</th>
+                                                <th>Email</th>
+                                                <th>Status</th>
+                                                <th>Assigned Exams</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Proctors will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Quick Actions</h5>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-primary w-100 mb-2" id="viewProctorScheduleBtn">View Schedule</button>
+                                <button class="btn btn-outline-secondary w-100 mb-2" id="sendNotificationBtn">Send Notification</button>
+                                <button class="btn btn-outline-info w-100 mb-2" id="generateReportBtn">Generate Report</button>
+                                <button class="btn btn-outline-warning w-100" id="managePermissionsBtn">Manage Permissions</button>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm mt-3">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Proctor Statistics</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <h4 id="totalProctors">0</h4>
+                                        <small class="text-muted">Total Proctors</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4 id="activeProctors">0</h4>
+                                        <small class="text-muted">Active</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add/Edit Proctor Modal -->
+                <div class="modal fade" id="proctorModal" tabindex="-1" aria-labelledby="proctorModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form id="proctorForm" class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="proctorModalLabel">Add/Edit Proctor</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <input type="hidden" id="proctorStudentNo" name="studentNo" />
+                                <div class="mb-3">
+                                    <label for="proctorName" class="form-label">Name</label>
+                                    <input type="text" class="form-control" id="proctorName" name="name" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="proctorEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="proctorEmail" name="email" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="proctorStatus" class="form-label">Status</label>
+                                    <select class="form-select" id="proctorStatus" name="status" required>
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="proctorPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="proctorPassword" name="password" />
+                                    <small class="form-text text-muted">Leave blank to keep current password.</small>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary" id="saveProctorBtn">Save</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Global Exam Controls Section -->
+            <section class="container my-4 border p-3 rounded section-content" id="globalExamControlsSection" style="display: none;">
+                <h2>Global Exam Controls</h2>
+                <p>Control all exams system-wide and manage global settings.</p>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card shadow-sm border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="card-title mb-0">Emergency Controls</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">Emergency actions that affect all ongoing exams.</p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-danger" id="emergencyStopBtn" data-bs-toggle="modal" data-bs-target="#emergencyStopModal">
+                                        <i class="bi bi-exclamation-triangle"></i> Emergency Stop All Exams
+                                    </button>
+                                    <button class="btn btn-warning" id="pauseAllExamsBtn">
+                                        <i class="bi bi-pause-circle"></i> Pause All Exams
+                                    </button>
+                                    <button class="btn btn-success" id="resumeAllExamsBtn">
+                                        <i class="bi bi-play-circle"></i> Resume All Exams
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Global Notifications</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">Send notifications to all students or proctors.</p>
+                                <form id="globalNotificationForm">
+                                    <div class="mb-3">
+                                        <label for="notificationRecipient" class="form-label">Send to</label>
+                                        <select class="form-select" id="notificationRecipient" name="recipient" required>
+                                            <option value="all_students">All Students</option>
+                                            <option value="all_proctors">All Proctors</option>
+                                            <option value="all_users">All Users</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="notificationMessage" class="form-label">Message</label>
+                                        <textarea class="form-control" id="notificationMessage" name="message" rows="3" required></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Send Notification</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Bulk Exam Operations</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="bulkOperationSubject" class="form-label">Subject</label>
+                                <select class="form-select" id="bulkOperationSubject">
+                                    <option value="all" selected>All Subjects</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="bulkOperation" class="form-label">Operation</label>
+                                <select class="form-select" id="bulkOperation">
+                                    <option value="close">Close Exams</option>
+                                    <option value="open">Open Exams</option>
+                                    <option value="extend">Extend Time</option>
+                                    <option value="reset">Reset Attempts</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="bulkOperationValue" class="form-label">Value (minutes)</label>
+                                <input type="number" class="form-control" id="bulkOperationValue" placeholder="For extend operation">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-warning" id="executeBulkOperationBtn">Execute Operation</button>
+                            <button class="btn btn-info" id="previewBulkOperationBtn">Preview Operation</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">System Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <h4 id="ongoingExamsCount">0</h4>
+                                <small class="text-muted">Ongoing Exams</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h4 id="activeStudentsCount">0</h4>
+                                <small class="text-muted">Active Students</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h4 id="systemLoad">Normal</h4>
+                                <small class="text-muted">System Load</small>
+                            </div>
+                            <div class="col-md-3">
+                                <h4 id="lastBackupTime">-</h4>
+                                <small class="text-muted">Last Backup</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emergency Stop Modal -->
+                <div class="modal fade" id="emergencyStopModal" tabindex="-1" aria-labelledby="emergencyStopModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title" id="emergencyStopModalLabel">Emergency Stop All Exams</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-danger" role="alert">
+                                    <strong>Warning!</strong> This action will immediately stop all ongoing exams and prevent students from continuing. This cannot be undone.
+                                </div>
+                                <div class="mb-3">
+                                    <label for="emergencyStopReason" class="form-label">Reason for Emergency Stop</label>
+                                    <textarea class="form-control" id="emergencyStopReason" rows="3" placeholder="Please provide a reason for this emergency action..." required></textarea>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="confirmEmergencyStop" required>
+                                    <label class="form-check-label" for="confirmEmergencyStop">
+                                        I confirm that I want to stop all ongoing exams
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-danger" id="confirmEmergencyStopBtn">Stop All Exams</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+    <!-- Bootstrap JS Bundle CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <script>
+        // Mobile sidebar toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.querySelector('.main-content');
+
+            if (sidebarToggle && sidebar && sidebarOverlay) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                    sidebarOverlay.classList.toggle('show');
+                    document.body.classList.toggle('sidebar-open');
+                });
+
+                sidebarOverlay.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    sidebarOverlay.classList.remove('show');
+                    document.body.classList.remove('sidebar-open');
+                });
+            }
+
+            // Close sidebar when clicking on a nav link (mobile)
+            const navLinks = sidebar.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('show');
+                        sidebarOverlay.classList.remove('show');
+                        document.body.classList.remove('sidebar-open');
+                    }
+                });
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 768) {
+                    sidebar.classList.remove('show');
+                    sidebarOverlay.classList.remove('show');
+                    document.body.classList.remove('sidebar-open');
+                }
+            });
+        });
+        let allUsers = [];
+        let filteredUsers = [];
+        let userActivityChart, examCompletionChart, systemPerformanceChart;
+
+        // Render users in the table
+        function renderUsers() {
+            const tbody = document.querySelector('#userTable tbody');
+            tbody.innerHTML = '';
+
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No users found.</td></tr>';
+                return;
+            }
+
+            filteredUsers.forEach(user => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td><input type="checkbox" class="userCheckbox" value="${user.studentNo}"></td>
+                    <td>${user.studentNo}</td>
+                    <td>${user.name}</td>
+                    <td>${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-1 editUserBtn" data-studentno="${user.studentNo}">Edit</button>
+                        <button class="btn btn-sm btn-danger me-1 deleteUserBtn" data-studentno="${user.studentNo}">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            updateBulkActionButtons();
+        }
+
+        // Filter users based on search and filters
+        function filterUsers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const roleFilter = document.getElementById('filterRole').value;
+
+            filteredUsers = allUsers.filter(user => {
+                const matchesSearch = user.name.toLowerCase().includes(searchTerm) ||
+                                    user.studentNo.toLowerCase().includes(searchTerm) ||
+                                    user.email.toLowerCase().includes(searchTerm);
+                const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+
+                return matchesSearch && matchesRole;
+            });
+
+            renderUsers();
+        }
+
+        // Update bulk action buttons state
+        function updateBulkActionButtons() {
+            const checkedBoxes = document.querySelectorAll('.userCheckbox:checked');
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const bulkRoleChangeBtn = document.getElementById('bulkRoleChangeBtn');
+
+            bulkDeleteBtn.disabled = checkedBoxes.length === 0;
+            bulkRoleChangeBtn.disabled = checkedBoxes.length === 0;
+        }
+
+        // Handle user actions (add, edit, delete, toggle status)
+        async function handleUserAction(action, userData) {
+            try {
+                const formData = new FormData();
+                formData.append('action', action);
+                for (const key in userData) {
+                    if (Array.isArray(userData[key])) {
+                        userData[key].forEach(value => formData.append(key + '[]', value));
+                    } else {
+                        formData.append(key, userData[key]);
+                    }
+                }
+                const response = await fetch('manage_user.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    alert(data.message);
+                    loadUsers(); // Reload users after action
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Tab switching functionality
+            const tabs = document.querySelectorAll('#sidebarTabs .nav-link');
+            const sections = document.querySelectorAll('.section-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    const targetId = tab.id.replace('Tab', 'Section');
+                    sections.forEach(section => {
+                        section.style.display = section.id === targetId ? 'block' : 'none';
+                    });
+
+                    // Load users when User Management tab is clicked
+                    if (targetId === 'userManagementSection') {
+                        loadUsers();
+                    }
+
+                    // Load system settings when System Settings tab is clicked
+                    if (targetId === 'systemSettingsSection') {
+                        loadSystemSettings();
+                    }
+                });
+            });
+
+            // Search and filter event listeners
+            document.getElementById('searchInput').addEventListener('input', filterUsers);
+            document.getElementById('filterRole').addEventListener('change', filterUsers);
+            document.getElementById('filterStatus').addEventListener('change', filterUsers);
+
+            // Select all checkbox
+            document.getElementById('selectAllUsers').addEventListener('change', (e) => {
+                const checkboxes = document.querySelectorAll('.userCheckbox');
+                checkboxes.forEach(cb => cb.checked = e.target.checked);
+                updateBulkActionButtons();
+            });
+
+            // Individual checkbox change
+            document.addEventListener('change', (e) => {
+                if (e.target.classList.contains('userCheckbox')) {
+                    updateBulkActionButtons();
+                }
+            });
+
+            // Add user button
+            document.getElementById('addUserBtn').addEventListener('click', () => {
+                document.getElementById('userModalLabel').textContent = 'Add User';
+                document.getElementById('userForm').reset();
+                document.getElementById('userStudentNo').value = '';
+                new bootstrap.Modal(document.getElementById('userModal')).show();
+            });
+
+            // Edit user button
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('editUserBtn')) {
+                    const studentNo = e.target.dataset.studentno;
+                    const user = allUsers.find(u => u.studentNo === studentNo);
+                    if (user) {
+                        document.getElementById('userModalLabel').textContent = 'Edit User';
+                        document.getElementById('userStudentNo').value = user.studentNo;
+                        document.getElementById('userName').value = user.name;
+                        document.getElementById('userEmail').value = user.email;
+                        document.getElementById('userRole').value = user.role;
+                        document.getElementById('userStatus').value = user.status;
+                        document.getElementById('userPassword').value = '';
+                        new bootstrap.Modal(document.getElementById('userModal')).show();
+                    }
+                }
+            });
+
+            // Delete user button
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('deleteUserBtn')) {
+                    const studentNo = e.target.dataset.studentno;
+                    if (confirm(`Are you sure you want to delete user ${studentNo}?`)) {
+                        handleUserAction('delete', { studentNo });
+                    }
+                }
+            });
+
+            // Toggle status button
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('toggleStatusBtn')) {
+                    const studentNo = e.target.dataset.studentno;
+                    const newStatus = e.target.dataset.status === 'active' ? 'disabled' : 'active';
+                    handleUserAction('toggle_status', { studentNo, status: newStatus });
+                }
+            });
+
+            // Bulk delete
+            document.getElementById('bulkDeleteBtn').addEventListener('click', () => {
+                const selectedUsers = Array.from(document.querySelectorAll('.userCheckbox:checked')).map(cb => cb.value);
+                if (selectedUsers.length > 0 && confirm(`Are you sure you want to delete ${selectedUsers.length} user(s)?`)) {
+                    handleUserAction('bulk_delete', { studentNos: selectedUsers });
+                }
+            });
+
+            // Bulk role change
+            document.getElementById('bulkRoleChangeBtn').addEventListener('click', () => {
+                const selectedUsers = Array.from(document.querySelectorAll('.userCheckbox:checked')).map(cb => cb.value);
+                const newRole = prompt('Enter new role for selected users (student/proctor):');
+                if (newRole && (newRole === 'student' || newRole === 'proctor')) {
+                    handleUserAction('bulk_change_role', { studentNos: selectedUsers, role: newRole });
+                }
+            });
+
+            // User form submission
+            document.getElementById('userForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const userData = Object.fromEntries(formData.entries());
+
+                const action = userData.studentNo ? 'update' : 'add';
+                await handleUserAction(action, userData);
+
+                bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+            });
+
+            // Load users initially if User Management is active
+            if (document.getElementById('userManagementTab').classList.contains('active')) {
+                loadUsers();
+            }
+        });
+
+        // System Settings Functions
+        let currentSettings = {};
+
+
+
+        // Populate the form with current settings
+        function populateSettingsForm(settings) {
+            document.getElementById('defaultExamDuration').value = settings.default_exam_duration || 60;
+            document.getElementById('cheatingThreshold').value = settings.cheating_detection_threshold || 0.8;
+            document.getElementById('passwordMinLength').value = settings.password_min_length || 8;
+            document.getElementById('sessionTimeout').value = settings.session_timeout || 30;
+            document.getElementById('passwordRequireSpecial').checked = !!settings.password_require_special;
+            document.getElementById('emailAlertCheating').checked = !!settings.email_alert_cheating;
+            document.getElementById('emailAlertExamClosure').checked = !!settings.email_alert_exam_closure;
+        }
+
+        // Handle system settings form submission
+        document.getElementById('systemSettingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('update_system_settings.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    alert('System settings updated successfully!');
+                    loadSystemSettings(); // Reload settings
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Preview changes
+        document.getElementById('previewChangesBtn').addEventListener('click', () => {
+            const formData = new FormData(document.getElementById('systemSettingsForm'));
+            const newSettings = Object.fromEntries(formData.entries());
+
+            let previewHtml = '<h5>Current Settings vs New Settings</h5><table class="table table-striped"><thead><tr><th>Setting</th><th>Current</th><th>New</th></tr></thead><tbody>';
+
+            previewHtml += `<tr><td>Default Exam Duration</td><td>${currentSettings.default_exam_duration || 'N/A'} minutes</td><td>${newSettings.default_exam_duration} minutes</td></tr>`;
+            previewHtml += `<tr><td>Cheating Detection Threshold</td><td>${currentSettings.cheating_detection_threshold || 'N/A'}</td><td>${newSettings.cheating_detection_threshold}</td></tr>`;
+            previewHtml += `<tr><td>Password Min Length</td><td>${currentSettings.password_min_length || 'N/A'}</td><td>${newSettings.password_min_length}</td></tr>`;
+            previewHtml += `<tr><td>Session Timeout</td><td>${currentSettings.session_timeout || 'N/A'} minutes</td><td>${newSettings.session_timeout} minutes</td></tr>`;
+            previewHtml += `<tr><td>Require Special Characters</td><td>${currentSettings.password_require_special == 1 ? 'Yes' : 'No'}</td><td>${newSettings.password_require_special ? 'Yes' : 'No'}</td></tr>`;
+            previewHtml += `<tr><td>Email Alert Cheating</td><td>${currentSettings.email_alert_cheating == 1 ? 'Yes' : 'No'}</td><td>${newSettings.email_alert_cheating ? 'Yes' : 'No'}</td></tr>`;
+            previewHtml += `<tr><td>Email Alert Exam Closure</td><td>${currentSettings.email_alert_exam_closure == 1 ? 'Yes' : 'No'}</td><td>${newSettings.email_alert_exam_closure ? 'Yes' : 'No'}</td></tr>`;
+
+            previewHtml += '</tbody></table>';
+
+            document.getElementById('previewContent').innerHTML = previewHtml;
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        });
+
+        // Confirm save from preview
+        document.getElementById('confirmSaveBtn').addEventListener('click', () => {
+            bootstrap.Modal.getInstance(document.getElementById('previewModal')).hide();
+            document.getElementById('systemSettingsForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+
+        // Reset to defaults
+        document.getElementById('resetToDefaultsBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset all settings to defaults?')) {
+                const defaultSettings = {
+                    default_exam_duration: 60,
+                    cheating_detection_threshold: 0.8,
+                    password_min_length: 8,
+                    session_timeout: 30,
+                    password_require_special: true,
+                    email_alert_cheating: true,
+                    email_alert_exam_closure: true
+                };
+                populateSettingsForm(defaultSettings);
+            }
+        });
+
+        // Reports & Analytics Functions
+        let systemResultsData = [];
+        let cheatingAnalyticsData = {};
+        let pollingInterval = null;
+
+        // Load system-wide results
+        async function loadSystemResults() {
+            try {
+                const subjectFilter = document.getElementById('filterSubject').value;
+                const startDate = document.getElementById('filterStartDate').value;
+                const endDate = document.getElementById('filterEndDate').value;
+
+                let url = 'get_admin_reports.php?';
+                if (subjectFilter !== 'all') url += `subject=${encodeURIComponent(subjectFilter)}&`;
+                if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
+                if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    systemResultsData = data.data.results;
+                    populateSubjectFilter(data.data.subjects);
+                    renderSystemResultsTable();
+                } else {
+                    console.error('Failed to load system results:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading system results:', error);
+            }
+        }
+
+        // Populate subject filter dropdown
+        function populateSubjectFilter(subjects) {
+            const filterSelect = document.getElementById('filterSubject');
+            filterSelect.innerHTML = '<option value="all" selected>All Subjects</option>';
+
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                filterSelect.appendChild(option);
+            });
+        }
+
+        // Render system results table
+        function renderSystemResultsTable() {
+            const tbody = document.querySelector('#systemResultsTable tbody');
+            tbody.innerHTML = '';
+
+            if (systemResultsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8">No results found.</td></tr>';
+                return;
+            }
+
+            systemResultsData.forEach(result => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${result.studentNo}</td>
+                    <td>${result.student_name}</td>
+                    <td>${result.subject}</td>
+                    <td>${result.section || 'N/A'}</td>
+                    <td>${result.score}</td>
+                                <td>${result.average_score !== null && result.average_score !== undefined ? result.average_score : 0}</td>
+                    <td>${result.exam_count || 0}</td>
+                    <td>${new Date(result.taken_at).toLocaleDateString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Load cheating analytics
+        async function loadCheatingAnalytics() {
+            try {
+                const startDate = document.getElementById('chartStartDate').value;
+                const endDate = document.getElementById('chartEndDate').value;
+
+                let url = 'get_admin_cheating_analytics.php?';
+                if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
+                if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    cheatingAnalyticsData = data.data;
+                    renderCheatingAnalytics();
+                } else {
+                    console.error('Failed to load cheating analytics:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading cheating analytics:', error);
+            }
+        }
+
+        // Render cheating analytics
+        function renderCheatingAnalytics() {
+            // Update total incidents
+            document.getElementById('totalCheatingIncidents').textContent = cheatingAnalyticsData.total_cheating;
+
+            // Render recent cheating incidents
+            const recentList = document.getElementById('recentCheatingList');
+            recentList.innerHTML = '';
+
+            if (cheatingAnalyticsData.recent_cheating.length === 0) {
+                recentList.innerHTML = '<li class="list-group-item">No recent incidents</li>';
+            } else {
+                cheatingAnalyticsData.recent_cheating.forEach(incident => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.innerHTML = `
+                        <strong>${incident.student_name} (${incident.studentNo})</strong><br>
+                        <small>${incident.exam_title || 'Unknown Exam'} - ${new Date(incident.timestamp).toLocaleString()}</small>
+                    `;
+                    recentList.appendChild(li);
+                });
+            }
+
+            // Render top cheating students
+            const studentsList = document.getElementById('topCheatingStudentsList');
+            studentsList.innerHTML = '';
+
+            if (cheatingAnalyticsData.student_cheating.length === 0) {
+                studentsList.innerHTML = '<li class="list-group-item">No data available</li>';
+            } else {
+                cheatingAnalyticsData.student_cheating.forEach(student => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    li.innerHTML = `
+                        ${student.name} (${student.studentNo})
+                        <span class="badge bg-danger rounded-pill">${student.count}</span>
+                    `;
+                    studentsList.appendChild(li);
+                });
+            }
+
+            // Render top cheating exams
+            const examsList = document.getElementById('topCheatingExamsList');
+            examsList.innerHTML = '';
+
+            if (cheatingAnalyticsData.exam_cheating.length === 0) {
+                examsList.innerHTML = '<li class="list-group-item">No data available</li>';
+            } else {
+                cheatingAnalyticsData.exam_cheating.forEach(exam => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    li.innerHTML = `
+                        ${exam.exam_title} (${exam.subject})
+                        <span class="badge bg-danger rounded-pill">${exam.count}</span>
+                    `;
+                    examsList.appendChild(li);
+                });
+            }
+        }
+
+        // Load additional reports data and render charts
+        async function loadAdditionalReports() {
+            try {
+                const startDate = document.getElementById('chartStartDate').value;
+                const endDate = document.getElementById('chartEndDate').value;
+
+                let url = 'get_admin_reports.php?';
+                if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
+                if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    renderCharts(data.data);
+                } else {
+                    console.error('Failed to load reports data:', data.message);
+                }
+            } catch (error) {
+                console.error('Error loading reports data:', error);
+            }
+        }
+
+        // Render charts using Chart.js
+        function renderCharts(data) {
+            // User Activity Chart
+            const userActivityCtx = document.getElementById('userActivityChart').getContext('2d');
+            new Chart(userActivityCtx, {
+                type: 'line',
+                data: {
+                    labels: data.user_activity.map(item => item.date),
+                    datasets: [{
+                        label: 'Exams Taken',
+                        data: data.user_activity.map(item => item.exams_taken),
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }, {
+                        label: 'Active Students',
+                        data: data.user_activity.map(item => item.active_students),
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'User Activity Over Time'
+                        }
+                    }
+                }
+            });
+
+            // Exam Completion Chart
+            const completionCtx = document.getElementById('examCompletionChart').getContext('2d');
+            new Chart(completionCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.completion_rates.map(item => item.title),
+                    datasets: [{
+                        label: 'Completed Students',
+                        data: data.completion_rates.map(item => item.completed_count),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Total Students',
+                        data: data.completion_rates.map(item => item.total_students),
+                        backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Exam Completion Rates'
+                        }
+                    }
+                }
+            });
+
+            // System Performance Chart (Cheating Trends)
+            const performanceCtx = document.getElementById('systemPerformanceChart').getContext('2d');
+            new Chart(performanceCtx, {
+                type: 'line',
+                data: {
+                    labels: data.cheating_trends ? data.cheating_trends.map(item => item.date) : [],
+                    datasets: [{
+                        label: 'Cheating Incidents',
+                        data: data.cheating_trends ? data.cheating_trends.map(item => item.incidents) : [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Cheating Trends'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Export functions
+        function exportToCSV() {
+            if (systemResultsData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            const headers = ['Student No', 'Name', 'Subject', 'Section', 'Score', 'Average Score', 'Exam Count', 'Date Taken'];
+            const csvContent = [
+                headers.join(','),
+                ...systemResultsData.map(row => [
+                    row.studentNo,
+                    `"${row.student_name}"`,
+                    `"${row.subject}"`,
+                    `"${row.section || 'N/A'}"`,
+                    row.score,
+                    row.average_score || 'N/A',
+                    row.exam_count || 'N/A',
+                    new Date(row.taken_at).toLocaleDateString()
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'system_results.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportToPDF() {
+            alert('PDF export functionality would be implemented here');
+        }
+
+        // Start/stop polling for cheating analytics
+        function startCheatingPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+            pollingInterval = setInterval(loadCheatingAnalytics, 30000); // Poll every 30 seconds
+        }
+
+        function stopCheatingPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        // Event listeners for Reports & Analytics
+        document.addEventListener('DOMContentLoaded', () => {
+            // Existing event listeners...
+
+            // Reports & Analytics event listeners
+            document.getElementById('applyFiltersBtn').addEventListener('click', loadSystemResults);
+            document.getElementById('exportCsvBtn').addEventListener('click', exportToCSV);
+            document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
+            document.getElementById('refreshCheatingAnalyticsBtn').addEventListener('click', loadCheatingAnalytics);
+            document.getElementById('applyChartFiltersBtn').addEventListener('click', loadAdditionalReports);
+
+            // Load data when Reports & Analytics tab is clicked
+            const reportsTab = document.getElementById('reportsAnalyticsTab');
+            reportsTab.addEventListener('click', () => {
+                // Load initial data for all subsections
+                loadSystemResults();
+                loadCheatingAnalytics();
+                loadAdditionalReports();
+
+                // Start polling for cheating analytics
+                startCheatingPolling();
+            });
+
+        // Stop polling when leaving Reports & Analytics tab
+            const otherTabs = document.querySelectorAll('#sidebarTabs .nav-link:not(#reportsAnalyticsTab)');
+            otherTabs.forEach(tab => {
+                tab.addEventListener('click', stopCheatingPolling);
+            });
+
+            // Notification functions
+            let notificationPollingInterval = null;
+
+            // Load notifications from server
+            async function loadNotifications() {
+                try {
+                    const response = await fetch('get_admin_notifications.php?t=' + new Date().getTime());
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        updateNotificationBadge(data.unread_count);
+                        renderNotificationDropdown(data.notifications);
+                    } else {
+                        console.error('Failed to load notifications:', data.message);
+                    }
+                } catch (error) {
+                    console.error('Error loading notifications:', error);
+                }
+            }
+
+            // Update notification badge
+            function updateNotificationBadge(count) {
+                const badge = document.getElementById('notificationBadge');
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            // Render notification dropdown
+            function renderNotificationDropdown(notifications) {
+                const notificationList = document.getElementById('notificationList');
+                const existingItems = notificationList.querySelectorAll('.notification-item');
+                existingItems.forEach(item => item.remove());
+
+                if (notifications.length === 0) {
+                    const noNotificationsItem = document.createElement('li');
+                    noNotificationsItem.className = 'dropdown-item text-muted';
+                    noNotificationsItem.textContent = 'No new notifications';
+                    notificationList.appendChild(noNotificationsItem);
+                } else {
+                    notifications.forEach(notification => {
+                        const notificationItem = document.createElement('li');
+                        notificationItem.className = 'notification-item';
+
+                        const link = document.createElement('a');
+                        link.className = 'dropdown-item d-flex justify-content-between align-items-start';
+                        link.href = '#';
+                        link.innerHTML = `
+                            <div>
+                                <strong>${notification.title}</strong><br>
+                                <small class="text-muted">${notification.message}</small><br>
+                                <small class="text-muted">${new Date(notification.created_at).toLocaleString()}</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary mark-read-btn" data-id="${notification.id}">Mark Read</button>
+                        `;
+
+                        notificationItem.appendChild(link);
+                        notificationList.appendChild(notificationItem);
+                    });
+                }
+            }
+
+            // Mark notification as read
+            async function markNotificationRead(notificationId) {
+                try {
+                    const response = await fetch('mark_notification_read.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ notification_id: notificationId })
+                    });
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        loadNotifications(); // Reload notifications
+                    } else {
+                        console.error('Failed to mark notification as read:', data.message);
+                    }
+                } catch (error) {
+                    console.error('Error marking notification as read:', error);
+                }
+            }
+
+            // Start notification polling
+            function startNotificationPolling() {
+                if (notificationPollingInterval) {
+                    clearInterval(notificationPollingInterval);
+                }
+                notificationPollingInterval = setInterval(loadNotifications, 30000); // Poll every 30 seconds
+            }
+
+            // Stop notification polling
+            function stopNotificationPolling() {
+                if (notificationPollingInterval) {
+                    clearInterval(notificationPollingInterval);
+                    notificationPollingInterval = null;
+                }
+            }
+
+            // Event listeners for notifications
+            document.addEventListener('DOMContentLoaded', () => {
+                // Load notifications on page load
+                loadNotifications();
+                startNotificationPolling();
+
+                // Handle mark as read button clicks
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('mark-read-btn')) {
+                        e.preventDefault();
+                        const notificationId = e.target.dataset.id;
+                        markNotificationRead(notificationId);
+                    }
+                });
+
+                // Handle view all notifications
+                document.getElementById('viewAllNotifications').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // For now, just reload notifications. In a full implementation, this could open a modal with all notifications
+                    loadNotifications();
+                });
+            });
+        });
+        // Exam Oversight Functions
+let examOversightPollingInterval = null;
+
+async function loadExamOversight() {
+    const spinner = document.getElementById('examOversightSpinner');
+    const errorDiv = document.getElementById('examOversightError');
+    const offlineDiv = document.getElementById('examOversightOffline');
+    const tbody = document.querySelector('#examOversightTable tbody');
+
+    spinner.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+    offlineDiv.classList.add('d-none');
+
+    try {
+        if (!navigator.onLine) {
+            spinner.classList.add('d-none');
+            offlineDiv.classList.remove('d-none');
+            return;
+        }
+
+        const response = await fetch('list_exams.php?t=' + new Date().getTime());
+        const text = await response.text();
+
+        if (!response.ok) {
+            throw new Error('Failed to load exams');
+        }
+
+        tbody.innerHTML = '';
+
+        if (!text.trim()) {
+            tbody.innerHTML = '<tr><td colspan="6">No exams available.</td></tr>';
+            return;
+        }
+
+        // Parse the plain text output from list_exams.php
+        const exams = text.split('Exam ID:').slice(1);
+
+        exams.forEach(examText => {
+            const lines = examText.trim().split('\n');
+            const examId = lines[0].trim();
+
+            const titleLine = lines.find(line => line.startsWith('Title:'));
+            const title = titleLine ? titleLine.replace('Title:', '').trim() : 'No Title';
+
+            const subjectLine = lines.find(line => line.startsWith('Subject:'));
+            const subject = subjectLine ? subjectLine.replace('Subject:', '').trim() : 'No Subject';
+
+            const statusLine = lines.find(line => line.startsWith('Status:'));
+            const status = statusLine ? statusLine.replace('Status:', '').trim() : 'open';
+
+            const studentCountLine = lines.find(line => line.startsWith('Student Count:'));
+            const studentCount = studentCountLine ? parseInt(studentCountLine.replace('Student Count:', '').trim()) : 0;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${examId}</td>
+                <td>${title}</td>
+                <td>${subject}</td>
+                <td><span class="badge ${status === 'closed' ? 'bg-danger' : 'bg-success'}">${status}</span></td>
+                <td>${studentCount}</td>
+                <td>
+                    <button class="btn btn-sm btn-warning me-1 closeExamBtn" data-examid="${examId}">Close</button>
+                    <button class="btn btn-sm btn-danger me-1 deleteExamBtn" data-examid="${examId}">Delete</button>
+                    <button class="btn btn-sm btn-info me-1 openExamBtn" data-examid="${examId}">Open</button>
+                    <button class="btn btn-sm btn-primary editExamBtn" data-examid="${examId}">Edit</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        spinner.classList.add('d-none');
+    } catch (error) {
+        console.error('Error loading exam oversight:', error);
+        spinner.classList.add('d-none');
+        errorDiv.textContent = 'Error loading exam oversight: ' + error.message;
+        errorDiv.classList.remove('d-none');
+    }
+}
+
+function retryLoadExamOversight() {
+    loadExamOversight();
+}
+
+async function deleteExam(examId) {
+    console.log('Attempting to delete exam with ID:', examId);
+    if (!confirm('Are you sure you want to delete this exam?')) return;
+
+    try {
+        const response = await fetch('delete_exam.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exam_id: examId })
+        });
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        if (data.status === 'success') {
+            alert(data.message);
+            await loadExamOversight();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error deleting exam:', error);
+        alert('Error deleting exam: ' + error.message);
+    }
+}
+
+async function closeExam(examId) {
+    if (!confirm('Are you sure you want to close this exam?')) return;
+
+    try {
+        const response = await fetch('close_exam.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exam_id: examId })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            alert(data.message);
+            loadExamOversight();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        alert('Error closing exam: ' + error.message);
+    }
+}
+
+async function openExam(examId) {
+    if (!confirm('Are you sure you want to open this exam?')) return;
+
+    try {
+        const response = await fetch('open_exam.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exam_id: examId })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            alert(data.message);
+            loadExamOversight();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        alert('Error opening exam: ' + error.message);
+    }
+}
+
+function startExamOversightPolling() {
+    if (examOversightPollingInterval) clearInterval(examOversightPollingInterval);
+    examOversightPollingInterval = setInterval(loadExamOversight, 30000);
+}
+
+function stopExamOversightPolling() {
+    if (examOversightPollingInterval) {
+        clearInterval(examOversightPollingInterval);
+        examOversightPollingInterval = null;
+    }
+}
+
+// Event listeners for Exam Oversight
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('refreshExamOversightBtn').addEventListener('click', loadExamOversight);
+
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('deleteExamBtn')) {
+            const examId = e.target.dataset.examid;
+            deleteExam(examId);
+        } else if (e.target.classList.contains('closeExamBtn')) {
+            const examId = e.target.dataset.examid;
+            closeExam(examId);
+        } else if (e.target.classList.contains('openExamBtn')) {
+            const examId = e.target.dataset.examid;
+            openExam(examId);
+        } else if (e.target.classList.contains('editExamBtn')) {
+            const examId = e.target.dataset.examid;
+            window.location.href = `edit-exam.html?exam_id=${encodeURIComponent(examId)}`;
+        }
+    });
+
+    // Load exam oversight when tab is clicked
+    const examOversightTab = document.getElementById('examOversightTab');
+    examOversightTab.addEventListener('click', () => {
+        loadExamOversight();
+        startExamOversightPolling();
+    });
+
+    // Stop polling when leaving tab
+    const otherTabs = document.querySelectorAll('#sidebarTabs .nav-link:not(#examOversightTab)');
+    otherTabs.forEach(tab => {
+        tab.addEventListener('click', stopExamOversightPolling);
+    });
+});
+// Global Cheating Analytics Functions
+let globalCheatingPollingInterval = null;
+
+async function loadGlobalCheatingAnalytics() {
+    const spinner = document.getElementById('globalCheatingSpinner');
+    const errorDiv = document.getElementById('globalCheatingError');
+    const offlineDiv = document.getElementById('globalCheatingOffline');
+    const trendsContainer = document.getElementById('globalCheatingTrends');
+    const preventionContainer = document.getElementById('globalCheatingPrevention');
+
+    if (spinner) spinner.classList.remove('d-none');
+    if (errorDiv) errorDiv.classList.add('d-none');
+    if (offlineDiv) offlineDiv.classList.add('d-none');
+
+    try {
+        if (!navigator.onLine) {
+            if (spinner) spinner.classList.add('d-none');
+            if (offlineDiv) offlineDiv.classList.remove('d-none');
+            return;
+        }
+
+        const response = await fetch('get_admin_cheating_analytics.php?t=' + new Date().getTime());
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Failed to load global cheating analytics');
+        }
+
+        // Render cheating trends
+        renderGlobalCheatingTrends(data.data, trendsContainer);
+
+        // Render prevention measures
+        renderPreventionMeasures(data.data, preventionContainer);
+
+        if (spinner) spinner.classList.add('d-none');
+    } catch (error) {
+        console.error('Error loading global cheating analytics:', error);
+        if (spinner) spinner.classList.add('d-none');
+        if (errorDiv) {
+            errorDiv.textContent = 'Error loading global cheating analytics: ' + error.message;
+            errorDiv.classList.remove('d-none');
+        }
+    }
+}
+
+function renderGlobalCheatingTrends(data, container) {
+    if (!container) return;
+
+    let html = '<h5>Cheating Trends Overview</h5>';
+    html += '<div class="row g-3">';
+    
+    // Total incidents card
+    html += `
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Incidents</h6>
+                    <h3>${data.total_cheating || 0}</h3>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Today's incidents card
+    html += `
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Today's Incidents</h6>
+                    <h3>${data.today_cheating || 0}</h3>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // This week's incidents card
+    html += `
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">This Week</h6>
+                    <h3>${data.week_cheating || 0}</h3>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Average per exam card
+    html += `
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Avg per Exam</h6>
+                    <h3>${data.avg_per_exam ? data.avg_per_exam.toFixed(1) : 0}</h3>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    html += '</div>';
+    
+    // Chart container
+    html += '<div class="mt-4"><canvas id="globalCheatingChart" height="200"></canvas></div>';
+    
+    container.innerHTML = html;
+    
+    // Render chart
+    renderGlobalCheatingChart(data.cheating_trends || []);
+}
+
+function renderGlobalCheatingChart(trends) {
+    const ctx = document.getElementById('globalCheatingChart');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trends.map(item => item.date),
+            datasets: [{
+                label: 'Cheating Incidents',
+                data: trends.map(item => item.incidents),
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Cheating Trends Over Time'
+                }
+            }
+        }
+    });
+}
+
+function renderPreventionMeasures(data, container) {
+    if (!container) return;
+
+    let html = '<h5>Prevention Measures</h5>';
+    html += '<div class="row g-3">';
+    
+    // Active measures
+    html += `
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Active Measures</div>
+                <ul class="list-group list-group-flush" id="activeMeasuresList">
+                    <li class="list-group-item">Screen monitoring enabled</li>
+                    <li class="list-group-item">Tab switching detection active</li>
+                    <li class="list-group-item">Copy-paste prevention active</li>
+                    <li class="list-group-item">Right-click disabled</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    // Effectiveness stats
+    html += `
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Effectiveness Statistics</div>
+                <div class="card-body">
+                    <p>Detection Rate: <strong>${data.detection_rate || 85}%</strong></p>
+                    <p>Prevention Success: <strong>${data.prevention_success || 92}%</strong></p>
+                    <p>Average Response Time: <strong>${data.avg_response_time || 30}s</strong></p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    html += '</div>';
+    
+    container.innerHTML = html;
+}
+
+function retryLoadGlobalCheatingAnalytics() {
+    loadGlobalCheatingAnalytics();
+}
+
+function startGlobalCheatingPolling() {
+    if (globalCheatingPollingInterval) clearInterval(globalCheatingPollingInterval);
+    globalCheatingPollingInterval = setInterval(loadGlobalCheatingAnalytics, 60000); // Poll every minute
+}
+
+function stopGlobalCheatingPolling() {
+    if (globalCheatingPollingInterval) {
+        clearInterval(globalCheatingPollingInterval);
+        globalCheatingPollingInterval = null;
+    }
+}
+
+// Audit Logs Functions
+let auditLogsPollingInterval = null;
+let currentAuditPage = 1;
+let auditLogsPerPage = 20;
+
+async function loadAuditLogs() {
+    const spinner = document.getElementById('auditLogsSpinner');
+    const errorDiv = document.getElementById('auditLogsError');
+    const offlineDiv = document.getElementById('auditLogsOffline');
+    const logsContainer = document.getElementById('auditLogsContainer');
+    const paginationContainer = document.getElementById('auditLogsPagination');
+
+    if (spinner) spinner.classList.remove('d-none');
+    if (errorDiv) errorDiv.classList.add('d-none');
+    if (offlineDiv) offlineDiv.classList.add('d-none');
+
+    try {
+        if (!navigator.onLine) {
+            if (spinner) spinner.classList.add('d-none');
+            if (offlineDiv) offlineDiv.classList.remove('d-none');
+            return;
+        }
+
+        const startDate = document.getElementById('auditStartDate')?.value;
+        const endDate = document.getElementById('auditEndDate')?.value;
+        const userFilter = document.getElementById('auditUserFilter')?.value;
+        const actionFilter = document.getElementById('auditActionFilter')?.value;
+
+        let url = `get_audit_logs.php?page=${currentAuditPage}&per_page=${auditLogsPerPage}`;
+        if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
+        if (endDate) url += `&end_date=${encodeURIComponent(endDate)}`;
+        if (userFilter) url += `&user=${encodeURIComponent(userFilter)}`;
+        if (actionFilter) url += `&action=${encodeURIComponent(actionFilter)}`;
+
+        const response = await fetch(url + '&t=' + new Date().getTime());
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Failed to load audit logs');
+        }
+
+        renderAuditLogs(data.data.logs, logsContainer);
+        renderAuditPagination(data.data.total_pages, data.data.total_logs, paginationContainer);
+
+        if (spinner) spinner.classList.add('d-none');
+    } catch (error) {
+        console.error('Error loading audit logs:', error);
+        if (spinner) spinner.classList.add('d-none');
+        if (errorDiv) {
+            errorDiv.textContent = 'Error loading audit logs: ' + error.message;
+            errorDiv.classList.remove('d-none');
+        }
+    }
+}
+
+function renderAuditLogs(logs, container) {
+    if (!container) return;
+
+    if (!logs || logs.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No audit logs found.</div>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="table table-striped table-hover"><thead>';
+    html += '<tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th><th>IP Address</th></tr>';
+    html += '</thead><tbody>';
+
+    logs.forEach(log => {
+        html += `
+            <tr>
+                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                <td>${log.user_name || log.user_id}</td>
+                <td><span class="badge bg-${getActionBadgeColor(log.action)}">${log.action}</span></td>
+                <td>${log.details || 'N/A'}</td>
+                <td>${log.ip_address || 'N/A'}</td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function getActionBadgeColor(action) {
+    const colors = {
+        'LOGIN': 'success',
+        'LOGOUT': 'secondary',
+        'CREATE_EXAM': 'primary',
+        'DELETE_EXAM': 'danger',
+        'UPDATE_EXAM': 'warning',
+        'START_EXAM': 'info',
+        'SUBMIT_EXAM': 'success',
+        'CHEATING_DETECTED': 'danger',
+        'USER_CREATED': 'primary',
+        'USER_DELETED': 'danger',
+        'SETTINGS_CHANGED': 'warning'
+    };
+    return colors[action] || 'secondary';
+}
+
+function renderAuditPagination(totalPages, totalLogs, container) {
+    if (!container) return;
+
+    let html = '<nav aria-label="Audit logs pagination">';
+    html += '<ul class="pagination justify-content-center">';
+
+    // Previous button
+    html += `<li class="page-item ${currentAuditPage === 1 ? 'disabled' : ''}">`;
+    html += `<a class="page-link" href="#" onclick="changeAuditPage(${currentAuditPage - 1})">Previous</a></li>`;
+
+    // Page numbers
+    for (let i = Math.max(1, currentAuditPage - 2); i <= Math.min(totalPages, currentAuditPage + 2); i++) {
+        html += `<li class="page-item ${i === currentAuditPage ? 'active' : ''}">`;
+        html += `<a class="page-link" href="#" onclick="changeAuditPage(${i})">${i}</a></li>`;
+    }
+
+    // Next button
+    html += `<li class="page-item ${currentAuditPage === totalPages ? 'disabled' : ''}">`;
+    html += `<a class="page-link" href="#" onclick="changeAuditPage(${currentAuditPage + 1})">Next</a></li>`;
+
+    html += '</ul>';
+    html += `<p class="text-center mt-2 text-muted">Showing ${((currentAuditPage - 1) * auditLogsPerPage) + 1} to ${Math.min(currentAuditPage * auditLogsPerPage, totalLogs)} of ${totalLogs} logs</p>`;
+    html += '</nav>';
+
+    container.innerHTML = html;
+}
+
+function changeAuditPage(page) {
+    currentAuditPage = page;
+    loadAuditLogs();
+}
+
+function retryLoadAuditLogs() {
+    loadAuditLogs();
+}
+
+function startAuditLogsPolling() {
+    if (auditLogsPollingInterval) clearInterval(auditLogsPollingInterval);
+    auditLogsPollingInterval = setInterval(loadAuditLogs, 120000); // Poll every 2 minutes
+}
+
+function stopAuditLogsPolling() {
+    if (auditLogsPollingInterval) {
+        clearInterval(auditLogsPollingInterval);
+        auditLogsPollingInterval = null;
+    }
+}
+
+// Event listeners for Global Cheating Analytics and Audit Logs
+document.addEventListener('DOMContentLoaded', () => {
+    // Global Cheating Analytics
+    const globalCheatingTab = document.getElementById('globalCheatingAnalyticsTab');
+    if (globalCheatingTab) {
+        globalCheatingTab.addEventListener('click', () => {
+            loadGlobalCheatingAnalytics();
+            startGlobalCheatingPolling();
+        });
+    }
+
+    // Stop global cheating polling when leaving tab
+    const otherTabsFromGlobal = document.querySelectorAll('#sidebarTabs .nav-link:not(#globalCheatingAnalyticsTab)');
+    otherTabsFromGlobal.forEach(tab => {
+        tab.addEventListener('click', stopGlobalCheatingPolling);
+    });
+
+    // Audit Logs
+    const auditLogsTab = document.getElementById('auditLogsTab');
+    if (auditLogsTab) {
+        auditLogsTab.addEventListener('click', () => {
+            loadAuditLogs();
+            startAuditLogsPolling();
+        });
+    }
+
+    // Stop audit logs polling when leaving tab
+    const otherTabsFromAudit = document.querySelectorAll('#sidebarTabs .nav-link:not(#auditLogsTab)');
+    otherTabsFromAudit.forEach(tab => {
+        tab.addEventListener('click', stopAuditLogsPolling);
+    });
+
+    // Audit logs filters
+    document.getElementById('auditStartDate')?.addEventListener('change', () => { currentAuditPage = 1; loadAuditLogs(); });
+    document.getElementById('auditEndDate')?.addEventListener('change', () => { currentAuditPage = 1; loadAuditLogs(); });
+    document.getElementById('auditUserFilter')?.addEventListener('input', () => { currentAuditPage = 1; loadAuditLogs(); });
+    document.getElementById('auditActionFilter')?.addEventListener('change', () => { currentAuditPage = 1; loadAuditLogs(); });
+});
+// Enhanced load functions with spinners and error handling
+
+// Enhanced loadUsers with spinner and error handling
+async function loadUsers() {
+    const tbody = document.querySelector('#userTable tbody');
+    const spinner = document.getElementById('usersSpinner') || createSpinner('userManagementSection');
+    const errorDiv = document.getElementById('usersError') || createErrorDiv('userManagementSection');
+
+    spinner.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+
+    try {
+        if (!navigator.onLine) {
+            spinner.classList.add('d-none');
+            showOfflineMessage('userManagementSection');
+            return;
+        }
+
+        console.log('Loading users...');
+        const response = await fetch('get_all_users.php?t=' + new Date().getTime());
+        const data = await response.json();
+        console.log('Users loaded:', data);
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Failed to load users');
+        }
+
+        allUsers = data.users;
+        filteredUsers = [...allUsers];
+        renderUsers();
+
+        spinner.classList.add('d-none');
+    } catch (error) {
+        console.error('Error loading users:', error);
+        spinner.classList.add('d-none');
+        errorDiv.textContent = 'Error loading users: ' + error.message;
+        errorDiv.classList.remove('d-none');
+    }
+}
+
+// Enhanced loadSystemSettings with spinner and error handling
+async function loadSystemSettings() {
+    const spinner = document.getElementById('systemSettingsSpinner') || createSpinner('systemSettingsSection');
+    const errorDiv = document.getElementById('systemSettingsError') || createErrorDiv('systemSettingsSection');
+
+    spinner.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+
+    try {
+        if (!navigator.onLine) {
+            spinner.classList.add('d-none');
+            showOfflineMessage('systemSettingsSection');
+            return;
+        }
+
+        console.log('Loading system settings...');
+        const response = await fetch('get_system_settings.php?t=' + new Date().getTime());
+        const data = await response.json();
+        console.log('System settings loaded:', data);
+
+        if (data.status === 'success') {
+            currentSettings = data.settings;
+            populateSettingsForm(data.settings);
+        } else {
+            throw new Error(data.message || 'Failed to load system settings');
+        }
+
+        spinner.classList.add('d-none');
+    } catch (error) {
+        console.error('Error loading system settings:', error);
+        spinner.classList.add('d-none');
+        errorDiv.textContent = 'Error loading system settings: ' + error.message;
+        errorDiv.classList.remove('d-none');
+    }
+}
+
+// Enhanced loadSystemResults with spinner and error handling
+async function loadSystemResults() {
+    const tbody = document.querySelector('#systemResultsTable tbody');
+    const spinner = document.getElementById('systemResultsSpinner') || createSpinner('reportsAnalyticsSection');
+    const errorDiv = document.getElementById('systemResultsError') || createErrorDiv('reportsAnalyticsSection');
+
+    spinner.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+
+    try {
+        if (!navigator.onLine) {
+            spinner.classList.add('d-none');
+            showOfflineMessage('reportsAnalyticsSection');
+            return;
+        }
+
+        const subjectFilter = document.getElementById('filterSubject').value;
+        const startDate = document.getElementById('filterStartDate').value;
+        const endDate = document.getElementById('filterEndDate').value;
+
+        let url = 'get_admin_reports.php?';
+        if (subjectFilter !== 'all') url += `subject=${encodeURIComponent(subjectFilter)}&`;
+        if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
+        if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            systemResultsData = data.data.results;
+            populateSubjectFilter(data.data.subjects);
+            renderSystemResultsTable();
+        } else {
+            throw new Error(data.message || 'Failed to load system results');
+        }
+
+        spinner.classList.add('d-none');
+    } catch (error) {
+        console.error('Error loading system results:', error);
+        spinner.classList.add('d-none');
+        errorDiv.textContent = 'Error loading system results: ' + error.message;
+        errorDiv.classList.remove('d-none');
+    }
+}
+
+// Enhanced loadCheatingAnalytics with spinner and error handling
+async function loadCheatingAnalytics() {
+    const spinner = document.getElementById('cheatingAnalyticsSpinner') || createSpinner('reportsAnalyticsSection');
+    const errorDiv = document.getElementById('cheatingAnalyticsError') || createErrorDiv('reportsAnalyticsSection');
+
+    spinner.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+
+    try {
+        if (!navigator.onLine) {
+            spinner.classList.add('d-none');
+            showOfflineMessage('reportsAnalyticsSection');
+            return;
+        }
+
+        const startDate = document.getElementById('chartStartDate').value;
+        const endDate = document.getElementById('chartEndDate').value;
+
+        let url = 'get_admin_cheating_analytics.php?';
+        if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
+        if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            cheatingAnalyticsData = data.data;
+            renderCheatingAnalytics();
+        } else {
+            throw new Error(data.message || 'Failed to load cheating analytics');
+        }
+
+        spinner.classList.add('d-none');
+    } catch (error) {
+        console.error('Error loading cheating analytics:', error);
+        spinner.classList.add('d-none');
+        errorDiv.textContent = 'Error loading cheating analytics: ' + error.message;
+        errorDiv.classList.remove('d-none');
+    }
+}
+
+// Helper functions for spinners and error handling
+function createSpinner(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return null;
+
+    const spinner = document.createElement('div');
+    spinner.id = sectionId + 'Spinner';
+    spinner.className = 'spinner-border text-primary d-none';
+    spinner.setAttribute('role', 'status');
+    spinner.innerHTML = '<span class="visually-hidden">Loading...</span>';
+
+    const header = section.querySelector('h2, h3, h4, h5, h6');
+    if (header) {
+        header.parentNode.insertBefore(spinner, header.nextSibling);
+    }
+
+    return spinner;
+}
+
+function createErrorDiv(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return null;
+
+    const errorDiv = document.createElement('div');
+    errorDiv.id = sectionId + 'Error';
+    errorDiv.className = 'alert alert-danger d-none';
+    errorDiv.setAttribute('role', 'alert');
+
+    const header = section.querySelector('h2, h3, h4, h5, h6');
+    if (header) {
+        header.parentNode.insertBefore(errorDiv, header.nextSibling);
+    }
+
+    return errorDiv;
+}
+
+function showOfflineMessage(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    let offlineDiv = section.querySelector('.offline-message');
+    if (!offlineDiv) {
+        offlineDiv = document.createElement('div');
+        offlineDiv.className = 'alert alert-warning offline-message';
+        offlineDiv.setAttribute('role', 'alert');
+        offlineDiv.innerHTML = 'You are offline. Data may not be up to date. <button class="btn btn-sm btn-warning" onclick="retryLoadSection(\'' + sectionId + '\')">Retry</button>';
+
+        const header = section.querySelector('h2, h3, h4, h5, h6');
+        if (header) {
+            header.parentNode.insertBefore(offlineDiv, header.nextSibling);
+        }
+    }
+    offlineDiv.classList.remove('d-none');
+}
+
+function retryLoadSection(sectionId) {
+    switch (sectionId) {
+        case 'userManagementSection':
+            loadUsers();
+            break;
+        case 'systemSettingsSection':
+            loadSystemSettings();
+            break;
+        case 'reportsAnalyticsSection':
+            loadSystemResults();
+            loadCheatingAnalytics();
+            break;
+        case 'examOversightSection':
+            loadExamOversight();
+            break;
+        case 'globalCheatingAnalyticsSection':
+            loadGlobalCheatingAnalytics();
+            break;
+        case 'auditLogsSection':
+            loadAuditLogs();
+            break;
+    }
+}
+
+// Global offline detection
+window.addEventListener('online', () => {
+    // Hide all offline messages when coming back online
+    document.querySelectorAll('.offline-message').forEach(div => div.classList.add('d-none'));
+});
+
+window.addEventListener('offline', () => {
+    // Show offline messages when going offline
+    const sections = ['userManagementSection', 'systemSettingsSection', 'reportsAnalyticsSection', 'examOversightSection', 'globalCheatingAnalyticsSection', 'auditLogsSection'];
+    sections.forEach(sectionId => showOfflineMessage(sectionId));
+});
+
+// Enhanced tab switching with data loading
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('#sidebarTabs .nav-link');
+    const sections = document.querySelectorAll('.section-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            const targetId = tab.id.replace('Tab', 'Section');
+            sections.forEach(section => {
+                section.style.display = section.id === targetId ? 'block' : 'none';
+            });
+
+            // Load data when tab is clicked
+            switch (targetId) {
+                case 'userManagementSection':
+                    if (!allUsers.length) loadUsers();
+                    break;
+                case 'systemSettingsSection':
+                    loadSystemSettings();
+                    break;
+                case 'reportsAnalyticsSection':
+                    loadSystemResults();
+                    loadCheatingAnalytics();
+                    break;
+                case 'examOversightSection':
+                    loadExamOversight();
+                    break;
+                case 'globalCheatingAnalyticsSection':
+                    loadGlobalCheatingAnalytics();
+                    break;
+                case 'auditLogsSection':
+                    loadAuditLogs();
+                    break;
+            }
+        });
+    });
+
+    // Enhanced confirm dialogs for critical actions
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('deleteUserBtn')) {
+            const studentNo = e.target.dataset.studentno;
+            if (!confirm(`Are you sure you want to delete user ${studentNo}? This action cannot be undone.`)) {
+                e.preventDefault();
+                return false;
+            }
+        }
+
+        if (e.target.classList.contains('deleteExamBtn')) {
+            const examId = e.target.dataset.examid;
+            if (!confirm(`Are you sure you want to delete exam ${examId}? This will permanently remove all associated data.`)) {
+                e.preventDefault();
+                return false;
+            }
+        }
+
+        if (e.target.classList.contains('closeExamBtn')) {
+            const examId = e.target.dataset.examid;
+            if (!confirm(`Are you sure you want to close exam ${examId}? Students will no longer be able to take this exam.`)) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+
+    // Load initial data for active tab
+    const activeTab = document.querySelector('#sidebarTabs .nav-link.active');
+    if (activeTab) {
+        const targetId = activeTab.id.replace('Tab', 'Section');
+        switch (targetId) {
+            case 'userManagementSection':
+                loadUsers();
+                break;
+            case 'systemSettingsSection':
+                loadSystemSettings();
+                break;
+        }
+    }
+});
+
+// Enhanced polling intervals with better error handling
+function startPollingWithErrorHandling(pollFunction, interval) {
+    return setInterval(async () => {
+        try {
+            if (navigator.onLine) {
+                await pollFunction();
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+            // Don't stop polling on error, just log it
+        }
+    }, interval);
+}
+
+// Update existing polling to use enhanced version
+function startCheatingPolling() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+    }
+    pollingInterval = startPollingWithErrorHandling(loadCheatingAnalytics, 30000);
+}
+
+function startExamOversightPolling() {
+    if (examOversightPollingInterval) clearInterval(examOversightPollingInterval);
+    examOversightPollingInterval = startPollingWithErrorHandling(loadExamOversight, 30000);
+}
+
+function startGlobalCheatingPolling() {
+    if (globalCheatingPollingInterval) clearInterval(globalCheatingPollingInterval);
+    globalCheatingPollingInterval = startPollingWithErrorHandling(loadGlobalCheatingAnalytics, 60000);
+}
+
+function startAuditLogsPolling() {
+    if (auditLogsPollingInterval) clearInterval(auditLogsPollingInterval);
+    auditLogsPollingInterval = startPollingWithErrorHandling(loadAuditLogs, 120000);
+}
+
+
+
+
+        // Backup/Restore Functions
+        document.getElementById('createBackupBtn').addEventListener('click', async () => {
+            const backupStatus = document.getElementById('backupStatus');
+            const backupMessage = document.getElementById('backupMessage');
+
+            backupStatus.classList.remove('d-none');
+            backupMessage.textContent = 'Creating backup...';
+
+            try {
+                const response = await fetch('backup_restore.php?action=create');
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    backupMessage.textContent = `Backup created successfully: ${result.filename} (${(result.size / 1024).toFixed(2)} KB)`;
+                    loadBackupHistory();
+                } else {
+                    backupMessage.textContent = `Backup failed: ${result.message}`;
+                }
+            } catch (error) {
+                backupMessage.textContent = `Backup failed: ${error.message}`;
+            }
+        });
+
+        async function loadBackupHistory() {
+            const tbody = document.querySelector('#backupHistoryTable tbody');
+            tbody.innerHTML = '<tr><td colspan="4">Loading backup history...</td></tr>';
+
+            try {
+                const response = await fetch('backup_restore.php?action=history');
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    if (result.backups.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">No backups found.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = '';
+                    result.backups.forEach(backup => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${backup.created}</td>
+                            <td>${backup.filename}</td>
+                            <td>${(backup.size / 1024).toFixed(2)} KB</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger deleteBackupBtn" data-filename="${backup.filename}">Delete</button>
+                                <a href="${backup.filepath}" class="btn btn-sm btn-primary" download>Download</a>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+
+                    // Add event listeners for delete buttons
+                    document.querySelectorAll('.deleteBackupBtn').forEach(button => {
+                        button.addEventListener('click', async (e) => {
+                            const filename = e.target.dataset.filename;
+                            if (confirm(`Are you sure you want to delete backup ${filename}?`)) {
+                                try {
+                                    const delResponse = await fetch(`backup_restore.php?action=delete&filename=${encodeURIComponent(filename)}`);
+                                    const delResult = await delResponse.json();
+
+                                    if (delResult.status === 'success') {
+                                        alert(delResult.message);
+                                        loadBackupHistory();
+                                    } else {
+                                        alert('Delete failed: ' + delResult.message);
+                                    }
+                                } catch (error) {
+                                    alert('Delete failed: ' + error.message);
+                                }
+                            }
+                        });
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4">Failed to load backup history: ${result.message}</td></tr>`;
+                }
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="4">Failed to load backup history: ${error.message}</td></tr>`;
+            }
+        }
+
+        // Load backup history on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBackupHistory();
+        });
+    </script>
+    
+</body>
+</html>

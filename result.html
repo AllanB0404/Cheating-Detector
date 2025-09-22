@@ -1,0 +1,174 @@
+e<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Test Result</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Test Result</h1>
+        <div class="mb-3">
+            <label for="subject-select" class="form-label">Select Subject:</label>
+            <select id="subject-select" class="form-select" aria-label="Select subject">
+                <option value="all">All Subjects</option>
+            </select>
+        </div>
+        <div id="result-container">
+            <!-- Test results will be displayed here -->
+        </div>
+        <a href="userdashboard.html" class="btn btn-secondary mt-3">Back to Dashboard</a>
+    </div>
+    <script>
+        async function loadSubjects() {
+            try {
+                const response = await fetch('get_subjects.php', { credentials: 'include' });
+                const data = await response.json();
+                if (data.status === 'success' && Array.isArray(data.subjects)) {
+                    const select = document.getElementById('subject-select');
+                    data.subjects.forEach(subject => {
+                        const option = document.createElement('option');
+                        option.value = subject;
+                        option.textContent = subject;
+                        select.appendChild(option);
+                    });
+                    // Set selected option based on URL param
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const subjectParam = urlParams.get('subject') || 'all';
+                    select.value = subjectParam;
+                } else {
+                    console.error('Failed to load subjects');
+                }
+            } catch (error) {
+                console.error('Error loading subjects:', error);
+            }
+        }
+
+        async function loadResult(subject) {
+            try {
+                const container = document.getElementById('result-container');
+                container.textContent = 'Loading...';
+
+                let querySubject = subject;
+                if (subject === 'all') {
+                    querySubject = '';
+                }
+
+                const response = await fetch(`get_exam_result_details.php?subject=${encodeURIComponent(querySubject)}`, { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    container.innerHTML = '';
+
+                    if (data.details.length === 0) {
+                        container.textContent = 'No test results available for this subject.';
+                    } else {
+                        // Group details by subject
+                        const grouped = data.details.reduce((acc, item) => {
+                            if (!acc[item.subject]) {
+                                acc[item.subject] = [];
+                            }
+                            acc[item.subject].push(item);
+                            return acc;
+                        }, {});
+
+                        Object.keys(grouped).forEach((subject) => {
+                            // Create a container div for each subject
+                            const subjectContainer = document.createElement('div');
+                            subjectContainer.className = 'border p-4 mb-4';
+
+                            const subjectHeader = document.createElement('h3');
+                            subjectHeader.textContent = subject;
+                            subjectContainer.appendChild(subjectHeader);
+
+                            // Group by title within subject
+                            const titleGroups = grouped[subject].reduce((acc, item) => {
+                                if (!acc[item.title]) {
+                                    acc[item.title] = [];
+                                }
+                                acc[item.title].push(item);
+                                return acc;
+                            }, {});
+
+                            Object.keys(titleGroups).forEach((title) => {
+                                const titleContainer = document.createElement('div');
+                                titleContainer.className = 'border p-3 mb-3';
+
+                                const titleHeader = document.createElement('h4');
+                                titleHeader.textContent = title;
+                                titleContainer.appendChild(titleHeader);
+
+                                titleGroups[title].forEach((item, index) => {
+                                    const div = document.createElement('div');
+                                    div.className = 'mb-2';
+
+                                    const question = document.createElement('p');
+                                    question.innerHTML = `<strong>Q${index + 1}:</strong> ${item.question_text}`;
+
+                                    const studentAnswer = document.createElement('p');
+                                    studentAnswer.innerHTML = `<strong>Your Answer:</strong> ${item.student_answer || '<em>No answer submitted</em>'}`;
+
+                                    const correctAnswer = document.createElement('p');
+                                    correctAnswer.innerHTML = `<strong>Correct Answer:</strong> ${item.correct_answer}`;
+
+                                    // Highlight if the student's answer is correct or not
+                                    if (item.is_correct === 1) {
+                                        studentAnswer.style.color = 'green';
+                                    } else {
+                                        studentAnswer.style.color = 'red';
+                                    }
+
+                                    // Show last updated timestamp if available
+                                    if (item.updated_at) {
+                                        const updatedAt = document.createElement('p');
+                                        updatedAt.innerHTML = `<small><em>Last updated: ${new Date(item.updated_at).toLocaleString()}</em></small>`;
+                                        div.appendChild(updatedAt);
+                                    }
+
+                                    div.appendChild(question);
+                                    div.appendChild(studentAnswer);
+                                    div.appendChild(correctAnswer);
+
+                                    titleContainer.appendChild(div);
+                                });
+
+                                subjectContainer.appendChild(titleContainer);
+                            });
+
+                            container.appendChild(subjectContainer);
+                        });
+                    }
+                } else {
+                    container.textContent = 'Failed to load test results.';
+                }
+            } catch (error) {
+                const container = document.getElementById('result-container');
+                container.textContent = 'Error loading test results.';
+                console.error('Error fetching test results:', error);
+            }
+        }
+
+        window.onload = async () => {
+            await loadSubjects();
+            const select = document.getElementById('subject-select');
+            select.addEventListener('change', () => {
+                const selectedSubject = select.value;
+                const url = new URL(window.location);
+                if (selectedSubject === 'all') {
+                    url.searchParams.delete('subject');
+                } else {
+                    url.searchParams.set('subject', selectedSubject);
+                }
+                window.history.pushState({}, '', url);
+                loadResult(selectedSubject);
+            });
+
+            // Load initial results based on URL param or all
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialSubject = urlParams.get('subject') || 'all';
+            loadResult(initialSubject);
+        };
+    </script>
+</body>
+</html>

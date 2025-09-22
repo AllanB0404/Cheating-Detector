@@ -1,0 +1,605 @@
+ <?php
+session_start();
+// Check if user is logged in as student
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
+    header("Location: Login.html");
+    exit();
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>User Dashboard</title>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Bootstrap Icons CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- Mobile Responsive CSS -->
+    <link href="mobile_responsive.css" rel="stylesheet" />
+    <!-- Redesigned CSS -->
+    <link href="userdashboard_redesign.css" rel="stylesheet" />
+
+</head>
+<body class="bg-light">
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">&#9776;</button>
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebar" class="show">
+                <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">User Dashboard</h4>
+                    <button id="sidebarClose" aria-label="Close sidebar">&times;</button>
+                </div>
+                <a class="nav-link position-relative d-inline-block mb-3" href="#" title="Notifications">
+                    <i class="bi bi-bell"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        3
+                        <span class="visually-hidden">unread notifications</span>
+                    </span>
+                </a>
+                <ul class="nav flex-column p-3 flex-grow-1 overflow-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#exam-list"><i class="bi bi-list-check"></i> Exam List</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#test-result"><i class="bi bi-bar-chart"></i> Results</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#profile"><i class="bi bi-person"></i> My Profile</a>
+                    </li>
+                    <li class="nav-item mt-auto">
+                        <a class="nav-link text-danger" href="Login.html"><i class="bi bi-box-arrow-right"></i> Logout</a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <main class="main-content">
+            <div>
+                <div class="row">
+                    <div class="col-12">
+                        <h1>Welcome to your dashboard</h1>
+                        <p>This is your user dashboard where you can see notifications, manage your profile, and logout.</p>
+
+      <div id="exam-section" class="content-section">
+            <div id="exam-list" class="border p-3 mb-3">
+                <h5>Exam</h5>
+                <a href="studentexam.php?subject=test" class="btn btn-primary" id="exam-button">Exam</a>
+            </div>
+            <div id="cheating-message" class="alert alert-danger d-none" role="alert">
+                You have been caught cheating on an exam. You cannot access that exam again. Please contact your proctor or professor for further assistance.
+            </div>
+
+        <div id="subjects-container">
+          <!-- Subjects will be dynamically loaded here -->
+        </div>
+        <div id="exams-container">
+          <!-- Exams will be dynamically loaded here -->
+        </div>
+      </div>
+    <script>
+        async function loadSubjects() {
+            try {
+                const response = await fetch('get_subjects.php');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    const container = document.getElementById('subjects-container');
+                    const cheatingMessage = document.getElementById('cheating-message');
+                    container.innerHTML = '';
+                    cheatingMessage.classList.add('d-none'); // Hide cheating message by default
+                    if (data.subjects.length === 0) {
+                        container.textContent = 'No subjects available.';
+                    } else {
+                        // Check URL params for cheating_detected message
+                        const urlParams = new URLSearchParams(window.location.search);
+                        // Remove any cheating_detected related query parameters from URL on page load
+                        if (urlParams.has('cheating_detected') || urlParams.has('message')) {
+                            if (window.history.replaceState) {
+                                const url = new URL(window.location);
+                                url.searchParams.delete('cheating_detected');
+                                url.searchParams.delete('message');
+                                window.history.replaceState({}, document.title, url.toString());
+                            }
+                            // Remove the query parameters from the actual URL bar without reloading
+                            window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+                        }
+                        data.subjects.forEach((item) => {
+                            const div = document.createElement('div');
+                            div.className = 'border p-3 mb-3';
+
+                            const title = document.createElement('h5');
+                            title.textContent = item.title;
+
+                            const subject = document.createElement('p');
+                            subject.textContent = `Subject: ${item.subject}`;
+
+                            const viewBtn = document.createElement('a');
+                            viewBtn.href = `studentexam.php?subject=${encodeURIComponent(item.subject)}`;
+                            viewBtn.className = 'btn btn-primary';
+                            viewBtn.textContent = 'View';
+
+                            div.appendChild(title);
+                            div.appendChild(subject);
+                            div.appendChild(viewBtn);
+
+                            container.appendChild(div);
+                        });
+                    }
+                    // Add event listener for exam buttons to check cheating before navigation
+                    document.querySelectorAll('#subjects-container a.btn-primary, #exam-button').forEach(button => {
+                        button.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            const url = button.href;
+                            const urlObj = new URL(url);
+                            const subject = urlObj.searchParams.get('subject');
+                            const cheatingMessage = document.getElementById('cheating-message');
+                            try {
+                                const response = await fetch('check_cheating.php', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                    },
+                                    body: new URLSearchParams({ subject }),
+                                });
+                                const result = await response.json();
+                                if (result.cheating_detected) {
+                                    // Show the cheating message container instead of alert
+                                    cheatingMessage.classList.remove('d-none');
+                                    cheatingMessage.scrollIntoView({ behavior: 'smooth' });
+                                } else {
+                                    window.location.href = url;
+                                }
+                            } catch (error) {
+                                console.error('Error checking cheating status:', error);
+                                window.location.href = url; // fallback to navigate
+                            }
+                        });
+                    });
+                } else {
+                    console.error('Failed to load subjects:', data.message);
+                }
+            } catch (error) {
+                console.error('Error fetching subjects:', error);
+            }
+        }
+
+    async function loadExams() {
+        try {
+            const response = await fetch('list_exams.php');
+            const text = await response.text();
+            const container = document.getElementById('exams-container');
+            const cheatingMessage = document.getElementById('cheating-message');
+            container.innerHTML = '';
+            cheatingMessage.classList.add('d-none'); // Hide cheating message by default
+
+            console.log('list_exams.php response:', text);
+
+            if (!text.trim()) {
+                container.textContent = 'No exams available.';
+                return;
+            }
+
+            // Parse the plain text output from list_exams.php
+            const exams = text.split('Exam ID:').slice(1);
+
+            // Group exams by title
+            const examsByTitle = {};
+            exams.forEach(examText => {
+                const lines = examText.trim().split('\n');
+                const titleLine = lines.find(line => line.startsWith('Title:'));
+                const title = titleLine ? titleLine.replace('Title:', '').trim() : 'No Title';
+
+                if (!examsByTitle[title]) {
+                    examsByTitle[title] = [];
+                }
+                examsByTitle[title].push(examText);
+            });
+
+            // Debug: Log grouped exams
+            console.log('Grouped exams by title:', examsByTitle);
+
+            // Create a row container for columns
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'row';
+
+            Object.keys(examsByTitle).forEach(title => {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'col-md-4';
+
+                const titleElem = document.createElement('h4');
+                titleElem.textContent = title;
+                colDiv.appendChild(titleElem);
+
+                examsByTitle[title].forEach(examText => {
+                    const examDiv = document.createElement('div');
+                    examDiv.className = 'border p-3 mb-3';
+
+                    const lines = examText.trim().split('\n');
+                    const subjectLine = lines.find(line => line.startsWith('Subject:'));
+                    const questionsIndex = lines.findIndex(line => line.startsWith('Questions:'));
+
+                    const subject = subjectLine ? subjectLine.replace('Subject:', '').trim() : 'No Subject';
+
+                    const subjectElem = document.createElement('p');
+                    subjectElem.textContent = `Subject: ${subject}`;
+
+                    examDiv.appendChild(subjectElem);
+
+                    // Add button to view exam questions
+                    const viewBtn = document.createElement('a');
+                    viewBtn.href = `studentexam.php?subject=${encodeURIComponent(subject)}`;
+                    viewBtn.className = 'btn btn-primary me-2';
+                    viewBtn.textContent = 'View Exam';
+
+                    examDiv.appendChild(viewBtn);
+
+                    // Add additional button as requested
+                    const extraBtn = document.createElement('a');
+                    extraBtn.href = `studentexam.php?subject=${encodeURIComponent(subject)}`;
+                    extraBtn.className = 'btn btn-secondary';
+                    extraBtn.textContent = 'Start Exam';
+
+                    examDiv.appendChild(extraBtn);
+
+                    // Add cheating check to buttons
+                    [viewBtn, extraBtn].forEach(button => {
+                        button.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            const url = button.href;
+                            const urlObj = new URL(url);
+                            const subject = urlObj.searchParams.get('subject');
+                            try {
+                                const response = await fetch('check_cheating.php', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                    },
+                                    body: new URLSearchParams({ subject }),
+                                });
+                                const result = await response.json();
+                                if (result.cheating_detected) {
+                                    cheatingMessage.classList.remove('d-none');
+                                    cheatingMessage.scrollIntoView({ behavior: 'smooth' });
+                                } else {
+                                    window.location.href = url;
+                                }
+                            } catch (error) {
+                                console.error('Error checking cheating status:', error);
+                                window.location.href = url; // fallback to navigate
+                            }
+                        });
+                    });
+
+                    // List questions
+                    // Removed to prevent displaying answers on dashboard as per user request
+                    // if (questionsIndex !== -1) {
+                    //     const questionsList = document.createElement('ul');
+                    //     for (let i = questionsIndex + 1; i < lines.length; i++) {
+                    //         const line = lines[i].trim();
+                    //         if (line) {
+                    //             const li = document.createElement('li');
+                    //             li.textContent = line.replace(/^- /, '');
+                    //             questionsList.appendChild(li);
+                    //         }
+                    //     }
+                    //     examDiv.appendChild(questionsList);
+                    // }
+
+                    colDiv.appendChild(examDiv);
+                });
+
+                rowDiv.appendChild(colDiv);
+            });
+
+            container.appendChild(rowDiv);
+        } catch (error) {
+            console.error('Error fetching exams:', error);
+        }
+    }
+
+window.onload = () => {
+    loadSubjects();
+    loadExams();
+    loadScores();
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarClose = document.getElementById('sidebarClose');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('show');
+        overlay.classList.toggle('show');
+        document.querySelector('main.main-content').classList.toggle('sidebar-shown');
+    }
+
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+        sidebarToggle.addEventListener('touchstart', toggleSidebar);
+    }
+
+    if (sidebarClose && sidebar) {
+        function closeSidebar() {
+            sidebar.classList.remove('show');
+            overlay.classList.remove('show');
+            document.querySelector('main.main-content').classList.remove('sidebar-shown');
+        }
+        // Remove any existing event listeners to avoid duplicates
+        const newSidebarClose = sidebarClose.cloneNode(true);
+        sidebarClose.parentNode.replaceChild(newSidebarClose, sidebarClose);
+        newSidebarClose.addEventListener('click', function(e) {
+            e.preventDefault();
+            closeSidebar();
+        });
+        newSidebarClose.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            closeSidebar();
+        });
+        // Add pointer cursor to sidebarClose for better UX
+        newSidebarClose.style.cursor = 'pointer';
+    }
+
+    if (overlay && sidebar) {
+        function closeSidebar() {
+            sidebar.classList.remove('show');
+            overlay.classList.remove('show');
+            document.querySelector('main.main-content').classList.remove('sidebar-shown');
+        }
+        overlay.addEventListener('click', closeSidebar);
+        overlay.addEventListener('touchstart', closeSidebar);
+    }
+});
+</script>
+    <div id="result-section" class="content-section">
+        <h2>Test Result</h2>
+        <div class="mb-3">
+            <label for="filter-subject" class="form-label">Filter by Subject:</label>
+            <select id="filter-subject" class="form-select" aria-label="Filter by Subject">
+                <option value="all" selected>All Subjects</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="sort-scores" class="form-label">Sort by:</label>
+            <select id="sort-scores" class="form-select" aria-label="Sort Scores">
+                <option value="title-asc" selected>Title (A-Z)</option>
+                <option value="title-desc">Title (Z-A)</option>
+                <option value="score-asc">Score (Low to High)</option>
+                <option value="score-desc">Score (High to Low)</option>
+            </select>
+        </div>
+        <div id="average-score" class="mb-3 fw-bold"></div>
+        <table class="table table-striped" id="scores-table" aria-label="Student Scores Table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Subject</th>
+                    <th>Score</th>
+                    <th>Grade</th>
+                    <th>Date Taken</th>
+                </tr>
+            </thead>
+            <tbody id="scores-tbody">
+                <!-- Scores will be dynamically loaded here -->
+            </tbody>
+        </table>
+        <div id="no-scores-message" class="text-muted"></div>
+            </div>
+        </div>
+        <div id="profile-section" class="content-section" style="display:none;">
+            <h2>My Profile</h2>
+            <a href="#" id="back-to-dashboard" class="mb-3 d-inline-block">← Back to Dashboard</a>
+            <div id="profile-content">
+                <!-- Profile content will be loaded here dynamically -->
+            </div>
+        </div>
+    <script>
+        async function loadScores() {
+            try {
+const response = await fetch('get_all_student_results.php');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    const tbody = document.getElementById('scores-tbody');
+                    const filterSelect = document.getElementById('filter-subject');
+                    const sortSelect = document.getElementById('sort-scores');
+                    const averageScoreDiv = document.getElementById('average-score');
+                    const noScoresMessage = document.getElementById('no-scores-message');
+
+                    tbody.innerHTML = '';
+                    filterSelect.innerHTML = '<option value="all" selected>All Subjects</option>';
+                    noScoresMessage.textContent = '';
+
+                    if (data.results.length === 0) {
+                        noScoresMessage.textContent = 'No test results available.';
+                        averageScoreDiv.textContent = '';
+                        return;
+                    }
+
+const subjects = [...new Set(data.results.map(s => s.subject))];
+subjects.forEach(subject => {
+    const option = document.createElement('option');
+    option.value = subject;
+    option.textContent = subject;
+    filterSelect.appendChild(option);
+});
+
+let scores = data.results;
+
+function renderScores(scoresToRender) {
+    tbody.innerHTML = '';
+    scoresToRender.forEach(score => {
+        const tr = document.createElement('tr');
+
+        const tdTitle = document.createElement('td');
+        tdTitle.textContent = score.exam_title;
+        tr.appendChild(tdTitle);
+
+const tdSubject = document.createElement('td');
+tdSubject.textContent = score.subject && score.subject.trim() !== '' ? score.subject : 'N/A';
+tr.appendChild(tdSubject);
+
+        const tdScore = document.createElement('td');
+        tdScore.textContent = score.score;
+        tr.appendChild(tdScore);
+
+        // Calculate grade based on score
+        const tdGrade = document.createElement('td');
+        let grade = '';
+        let numericScore = Number(score.score);
+        if (numericScore <= 1) {
+            numericScore *= 100;
+        }
+        if (numericScore >= 90) {
+            grade = 'A';
+        } else if (numericScore >= 80) {
+            grade = 'B';
+        } else if (numericScore >= 70) {
+            grade = 'C';
+        } else if (numericScore >= 60) {
+            grade = 'D';
+        } else {
+            grade = 'F';
+        }
+        tdGrade.textContent = grade;
+        tr.appendChild(tdGrade);
+
+        const tdDate = document.createElement('td');
+        tdDate.textContent = score.taken_at || 'N/A';
+        tr.appendChild(tdDate);
+
+        tbody.appendChild(tr);
+    });
+}
+
+function calculateAverage(scoresList) {
+    if (scoresList.length === 0) return 0;
+    const total = scoresList.reduce((acc, cur) => acc + Number(cur.score), 0);
+    return (total / scoresList.length).toFixed(2);
+}
+
+function updateAverageAndRender(filteredScores) {
+    const avg = calculateAverage(filteredScores);
+    averageScoreDiv.textContent = `Average Score: ${avg}`;
+    renderScores(filteredScores);
+}
+
+// Initial render
+updateAverageAndRender(scores);
+
+// Filter event
+filterSelect.addEventListener('change', () => {
+    let filtered = scores;
+    if (filterSelect.value !== 'all') {
+        filtered = scores.filter(s => s.subject === filterSelect.value);
+    }
+    // Apply sorting after filtering
+    filtered = sortScores(filtered, sortSelect.value);
+    updateAverageAndRender(filtered);
+});
+
+// Sort event
+sortSelect.addEventListener('change', () => {
+    let filtered = scores;
+    if (filterSelect.value !== 'all') {
+        filtered = scores.filter(s => s.subject === filterSelect.value);
+    }
+    filtered = sortScores(filtered, sortSelect.value);
+    updateAverageAndRender(filtered);
+});
+
+function sortScores(scoresList, criteria) {
+    const sorted = [...scoresList];
+    switch (criteria) {
+        case 'title-asc':
+            sorted.sort((a, b) => a.exam_title.localeCompare(b.exam_title));
+            break;
+        case 'title-desc':
+            sorted.sort((a, b) => b.exam_title.localeCompare(a.exam_title));
+            break;
+        case 'score-asc':
+            sorted.sort((a, b) => Number(a.score) - Number(b.score));
+            break;
+        case 'score-desc':
+            sorted.sort((a, b) => Number(b.score) - Number(a.score));
+            break;
+    }
+    return sorted;
+}
+                } else {
+                    console.error('Failed to load scores:', data.message);
+                }
+            } catch (error) {
+                console.error('Error fetching scores:', error);
+            }
+        }
+        window.onload = () => {
+            loadSubjects();
+            loadExams();
+            loadScores();
+        };
+    </script>
+    <script>
+        async function loadProfile() {
+            try {
+                const response = await fetch('profile.php');
+                const html = await response.text();
+                document.getElementById('profile-content').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                document.getElementById('profile-content').innerHTML = '<p>Error loading profile.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            const links = document.querySelectorAll('#sidebar .nav-link');
+            const backToDashboardLink = document.getElementById('back-to-dashboard');
+
+            // Hide all sections except default
+            sections.forEach(section => section.style.display = 'none');
+            document.getElementById('exam-section').style.display = 'block'; // default
+
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (this.getAttribute('href').startsWith('#')) {
+                        e.preventDefault();
+                        const target = this.getAttribute('href').substring(1);
+                        sections.forEach(section => section.style.display = 'none');
+                        if (target === 'exam-list') {
+                            document.getElementById('exam-section').style.display = 'block';
+                            backToDashboardLink.style.display = 'none';
+                        } else if (target === 'test-result') {
+                            document.getElementById('result-section').style.display = 'block';
+                            backToDashboardLink.style.display = 'none';
+                        } else if (target === 'profile') {
+                            loadProfile();
+                            document.getElementById('profile-section').style.display = 'block';
+                            backToDashboardLink.style.display = 'inline-block';
+                            // Remove active class from all nav links
+                            links.forEach(l => l.classList.remove('active'));
+                            // Add active class to the clicked link
+                            this.classList.add('active');
+                        }
+                    }
+                });
+            });
+
+            backToDashboardLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                sections.forEach(section => section.style.display = 'none');
+                document.getElementById('exam-section').style.display = 'block';
+                backToDashboardLink.style.display = 'none';
+                // Remove active class from all nav links
+                links.forEach(l => l.classList.remove('active'));
+            });
+        });
+    </script>
+            </main>
+        </div>
+    </div>
+    <!-- Bootstrap JS Bundle CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+/* Mobile Responsive Styles for Exam System Dashboards */
+
+/* General Mobile Styles */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+
+    .container, .container-fluid {
+        padding-left: 5px; /* Reduced padding */
+        padding-right: 5px; /* Reduced padding */
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-size: 1.2em;
+        margin-bottom: 15px;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        font-size: 14px;
+        min-height: 44px; /* Touch-friendly button size */
+    }
+
+    .form-control {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 10px;
+        min-height: 44px;
+    }
+
+    .table {
+        font-size: 12px;
+    }
+
+    .table-responsive {
+        border: none;
+    }
+
+    .card {
+        margin-bottom: 15px;
+    }
+
+    .modal-dialog {
+        margin: 10px;
+    }
+
+    .modal-content {
+        border-radius: 8px;
+    }
+
+    /* Sidebar Styles for Mobile */
+    #sidebar {
+        position: fixed !important;
+        top: 0;
+        left: -250px; /* Hidden by default */
+        width: 250px;
+        height: 100vh;
+        background-color: #f8f9fa;
+        transition: left 0.3s ease, transform 0.3s ease;
+        z-index: 1040;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        padding: 20px;
+        overflow-y: auto;
+        display: block;
+        transform: scale(0.9);
+        pointer-events: none; /* Prevent interaction when hidden */
+    }
+
+    #sidebar.show {
+        left: 0;
+        transform: scale(1);
+        pointer-events: auto; /* Enable interaction when shown */
+    }
+
+    /* Sidebar overlay */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1030;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .sidebar-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Sidebar toggle button */
+    .sidebar-toggle {
+        display: block !important;
+        position: fixed;
+        top: 10px;
+        left: 10px; /* Default for mobile */
+        z-index: 1050;
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 18px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        cursor: pointer;
+        width: 44px;
+        height: 44px;
+        text-align: center;
+        line-height: 24px;
+        transition: left 0.3s ease;
+    }
+
+    .sidebar-toggle:hover {
+        background: #0056b3;
+    }
+
+@media (min-width: 1025px) {
+    .sidebar-toggle {
+        left: 270px; /* Shift right only on desktop */
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar-toggle {
+        left: 10px; /* Reset left position on mobile */
+    }
+}
+
+    /* Close button styling for mobile sidebar */
+    #sidebarClose {
+        position: absolute !important;
+        right: 10px !important;
+        top: 10px !important;
+        background: #007bff !important;
+        color: white !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        width: 44px !important;
+        height: 44px !important;
+        padding: 10px !important;
+        font-size: 24px !important;
+        border-radius: 5px !important;
+        cursor: pointer;
+        z-index: 1060 !important;
+        text-align: center;
+        line-height: 24px;
+    }
+}
+
+/* Main Content Adjustment */
+.main-content {
+    margin-left: 0 !important;
+    padding: 20px 15px;
+    padding-top: 60px; /* Space for toggle button */
+    transition: margin-left 0.3s ease;
+}
+
+/* When sidebar is shown/expanded */
+.sidebar-expanded .main-content {
+    margin-left: 250px !important;
+}
+
+/* Sidebar toggle button position adjustment when sidebar expanded */
+.sidebar-expanded .sidebar-toggle {
+    left: 270px !important;
+}
+
+/* Sidebar toggle button position when sidebar collapsed */
+.sidebar-toggle {
+    left: 10px;
+    transition: left 0.3s ease;
+}
+
+/* Medium screens (tablets) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .sidebar {
+        width: 200px;
+    }
+
+    .main-content {
+        margin-left: 200px;
+    }
+
+    .container, .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    .sidebar-toggle {
+        display: none;
+    }
+
+    .sidebar {
+        left: 0 !important;
+    }
+}
+
+/* Large screens (desktops) */
+@media (min-width: 1025px) {
+    .sidebar-toggle {
+        display: none;
+    }
+
+    /* Sidebar column fixed width */
+    nav#sidebar {
+        width: 250px !important;
+        min-width: 250px !important;
+        max-width: 250px !important;
+    }
+
+    /* Main content column margin */
+    main.main-content {
+        margin-left: 250px !important;
+        width: calc(100% - 250px) !important;
+    }
+
+    .sidebar {
+        position: static !important;
+        height: auto;
+        left: auto !important;
+        z-index: auto;
+        border-right: 1px solid #dee2e6;
+        background-color: #fff;
+        box-shadow: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .sidebar, .sidebar-toggle, .btn, .nav-tabs {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+    }
+
+    .container, .container-fluid {
+        padding: 0;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .sidebar {
+        background-color: #000;
+        color: #fff;
+    }
+
+    .sidebar .nav-link {
+        color: #fff;
+        border: 1px solid #fff;
+    }
+
+    .sidebar .nav-link:hover {
+        background-color: #333;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar {
+        transition: none;
+    }
+
+    .sidebar-overlay {
+        transition: none;
+    }
+}

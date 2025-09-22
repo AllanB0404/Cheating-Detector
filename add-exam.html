@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add Exam</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .question {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .option-item input[type="text"] {
+            flex-grow: 1;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container my-4">
+        <a href="proctordashboard.html" class="btn btn-secondary mb-3">Back</a>
+        <h1 class="text-center mb-4">Add Exam</h1>
+        <form id="exam-form" class="bg-white p-4 rounded shadow-sm">
+            <div class="mb-3">
+                <label for="subject-name" class="form-label fw-bold">Subject Name</label>
+                <input type="text" id="subject-name" name="subject-name" class="form-control" placeholder="Enter subject name" required />
+            </div>
+            <div class="mb-3">
+                <label for="exam-title" class="form-label fw-bold">Exam Title</label>
+                <input type="text" id="exam-title" name="exam-title" class="form-control" placeholder="Enter exam title" required />
+            </div>
+            <div class="question" id="question-1">
+                <label for="question-type-1" class="form-label fw-bold">Question Type</label>
+                <select id="question-type-1" name="question-type-1" class="form-select question-type-select" required>
+                    <option value="short-answer" selected>Short Answer</option>
+                    <option value="multiple-choice">Multiple Choice</option>
+                    <option value="identification">Identification</option>
+                </select>
+
+                <label for="question-text-1" class="form-label fw-bold mt-3">Question 1</label>
+                <input type="text" id="question-text-1" name="question-text-1" class="form-control" placeholder="Enter your question here" required />
+
+                <div class="answer-container" id="answer-container-1">
+                    <label for="correct-answer-1" class="form-label fw-bold">Correct Answer</label>
+                    <input type="text" id="correct-answer-1" name="correct-answer-1" class="form-control" placeholder="Enter the correct answer here" required />
+                </div>
+            </div>
+            <button type="button" id="add-question-btn" class="btn btn-primary d-block mx-auto my-3">Add Question</button>
+            <button type="submit" id="submit-btn" class="btn btn-success w-100">Submit Exam</button>
+        </form>
+    </div>
+
+    <script>
+        let questionCount = 1;
+        const form = document.getElementById('exam-form');
+        const addQuestionBtn = document.getElementById('add-question-btn');
+
+        function createOptionInput(questionNum, optionNum) {
+            const optionDiv = document.createElement('div');
+            optionDiv.className = 'option-item';
+
+            const radioInput = document.createElement('input');
+            radioInput.type = 'radio';
+            radioInput.name = `correct-option-${questionNum}`;
+            radioInput.value = optionNum;
+            radioInput.required = true;
+
+            const textInput = document.createElement('input');
+            textInput.type = 'text';
+            textInput.name = `option-${questionNum}-${optionNum}`;
+            textInput.placeholder = `Option ${optionNum}`;
+            textInput.className = 'form-control';
+            textInput.required = true;
+
+            optionDiv.appendChild(radioInput);
+            optionDiv.appendChild(textInput);
+
+            return optionDiv;
+        }
+
+        function updateAnswerContainer(questionDiv, questionNum, type) {
+            const answerContainer = questionDiv.querySelector('.answer-container');
+            answerContainer.innerHTML = '';
+
+            if (type === 'short-answer' || type === 'identification') {
+                const label = document.createElement('label');
+                label.setAttribute('for', `correct-answer-${questionNum}`);
+                label.className = 'form-label fw-bold';
+                label.textContent = 'Correct Answer';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `correct-answer-${questionNum}`;
+                input.name = `correct-answer-${questionNum}`;
+                input.placeholder = 'Enter the correct answer here';
+                input.className = 'form-control';
+                input.required = true;
+
+                answerContainer.appendChild(label);
+                answerContainer.appendChild(input);
+            } else if (type === 'multiple-choice') {
+                const label = document.createElement('label');
+                label.className = 'form-label fw-bold';
+                label.textContent = 'Options (Select the correct one)';
+
+                const optionsContainer = document.createElement('div');
+                optionsContainer.className = 'options-container';
+
+                for (let i = 1; i <= 4; i++) {
+                    const optionInput = createOptionInput(questionNum, i);
+                    optionsContainer.appendChild(optionInput);
+                }
+
+                answerContainer.appendChild(label);
+                answerContainer.appendChild(optionsContainer);
+            }
+        }
+
+        function addQuestion() {
+            questionCount++;
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question';
+            questionDiv.id = `question-${questionCount}`;
+
+            // Question Type selector
+            const labelType = document.createElement('label');
+            labelType.setAttribute('for', `question-type-${questionCount}`);
+            labelType.className = 'form-label fw-bold';
+            labelType.textContent = 'Question Type';
+
+            const selectType = document.createElement('select');
+            selectType.id = `question-type-${questionCount}`;
+            selectType.name = `question-type-${questionCount}`;
+            selectType.className = 'form-select question-type-select';
+            selectType.required = true;
+
+            const optionShort = document.createElement('option');
+            optionShort.value = 'short-answer';
+            optionShort.textContent = 'Short Answer';
+            selectType.appendChild(optionShort);
+
+            const optionMC = document.createElement('option');
+            optionMC.value = 'multiple-choice';
+            optionMC.textContent = 'Multiple Choice';
+            selectType.appendChild(optionMC);
+
+            const optionId = document.createElement('option');
+            optionId.value = 'identification';
+            optionId.textContent = 'Identification';
+            selectType.appendChild(optionId);
+
+            // Question text label and input
+            const labelQuestion = document.createElement('label');
+            labelQuestion.setAttribute('for', `question-text-${questionCount}`);
+            labelQuestion.className = 'form-label fw-bold mt-3';
+            labelQuestion.textContent = `Question ${questionCount}`;
+
+            const inputQuestion = document.createElement('input');
+            inputQuestion.type = 'text';
+            inputQuestion.id = `question-text-${questionCount}`;
+            inputQuestion.name = `question-text-${questionCount}`;
+            inputQuestion.placeholder = 'Enter your question here';
+            inputQuestion.className = 'form-control';
+            inputQuestion.required = true;
+
+            // Answer container
+            const answerContainer = document.createElement('div');
+            answerContainer.className = 'answer-container';
+            answerContainer.id = `answer-container-${questionCount}`;
+
+            questionDiv.appendChild(labelType);
+            questionDiv.appendChild(selectType);
+            questionDiv.appendChild(labelQuestion);
+            questionDiv.appendChild(inputQuestion);
+            questionDiv.appendChild(answerContainer);
+
+            addQuestionBtn.before(questionDiv);
+
+            // Initialize answer container for default type
+            updateAnswerContainer(questionDiv, questionCount, selectType.value);
+
+            // Add event listener for type change
+            selectType.addEventListener('change', (e) => {
+                updateAnswerContainer(questionDiv, questionCount, e.target.value);
+            });
+        }
+
+        // Event listener for initial question type change
+        document.querySelector('.question-type-select').addEventListener('change', (e) => {
+            const questionDiv = e.target.closest('.question');
+            const qNum = questionDiv.id.split('-')[1];
+            updateAnswerContainer(questionDiv, qNum, e.target.value);
+        });
+
+        addQuestionBtn.addEventListener('click', addQuestion);
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const titleInput = document.getElementById('exam-title');
+            const title = titleInput.value.trim();
+
+            if (!title) {
+                alert('Please enter an exam title.');
+                return;
+            }
+
+            const subjectInput = document.getElementById('subject-name');
+            const subject = subjectInput.value.trim();
+
+            const questions = [];
+            const questionTypes = [];
+            const answers = [];
+
+            for (let i = 1; i <= questionCount; i++) {
+                const qTypeSelect = document.getElementById(`question-type-${i}`);
+                const qInput = document.getElementById(`question-text-${i}`);
+
+                if (!qTypeSelect || !qInput) continue;
+
+                const qType = qTypeSelect.value;
+                const questionText = qInput.value.trim();
+
+                if (!questionText) {
+                    alert(`Please enter the text for question ${i}.`);
+                    return;
+                }
+
+                questionTypes.push(qType);
+                questions.push(questionText);
+
+                if (qType === 'short-answer' || qType === 'identification') {
+                    const aInput = document.getElementById(`correct-answer-${i}`);
+                    if (!aInput || !aInput.value.trim()) {
+                        alert(`Please enter the correct answer for question ${i}.`);
+                        return;
+                    }
+                    answers.push(aInput.value.trim());
+                } else if (qType === 'multiple-choice') {
+                    const options = [];
+                    let correctOptionIndex = null;
+                    for (let j = 1; j <= 4; j++) {
+                        const optionInput = document.querySelector(`input[name="option-${i}-${j}"]`);
+                        const radioInput = document.querySelector(`input[name="correct-option-${i}"][value="${j}"]`);
+                        if (!optionInput || !optionInput.value.trim()) {
+                            alert(`Please enter text for option ${j} of question ${i}.`);
+                            return;
+                        }
+                        options.push(optionInput.value.trim());
+                        if (radioInput && radioInput.checked) {
+                            correctOptionIndex = j - 1; // zero-based index
+                        }
+                    }
+                    if (correctOptionIndex === null) {
+                        alert(`Please select the correct option for question ${i}.`);
+                        return;
+                    }
+                    answers.push({
+                        options: options,
+                        correctIndex: correctOptionIndex
+                    });
+                }
+            }
+
+            if (questions.length === 0) {
+                alert('Please add at least one question.');
+                return;
+            }
+
+            // Send data to server
+            fetch('save_exam.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            body: new URLSearchParams({
+                subject: subject,
+                title: title,
+                questions: JSON.stringify(questions),
+                questionTypes: JSON.stringify(questionTypes),
+                answers: JSON.stringify(answers),
+            }),
+            })
+            .then(response => response.json())
+.then(data => {
+                if (data.status === 'success') {
+                    alert('Exam saved successfully!');
+                    window.location.href = 'proctordashboard.html';
+                    form.reset();
+                    questionCount = 1;
+                    // Remove all questions except the first one
+                    const questionsDivs = document.querySelectorAll('.question');
+                    questionsDivs.forEach((div, index) => {
+                        if (index > 0) div.remove();
+                    });
+                    // Reset first question to default state
+                    const firstQuestionType = document.getElementById('question-type-1');
+                    updateAnswerContainer(document.getElementById('question-1'), 1, firstQuestionType.value);
+                } else {
+                    alert('Error saving exam: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error saving exam: ' + error.message);
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

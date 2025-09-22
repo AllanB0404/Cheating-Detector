@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Student Exam</title>
+</head>
+<body>
+    <h1>Exam Question</h1>
+    <form id="exam-form">
+        <div id="question-container">
+            <!-- The question posted by the proctor will be displayed here -->
+        </div>
+        <button type="submit">Submit Answers</button>
+    </form>
+    <div id="feedback" style="margin-top: 20px; font-weight: bold;"></div>
+    <script>
+        async function loadQuestions() {
+            try {
+                // Get subject from URL query string
+                const urlParams = new URLSearchParams(window.location.search);
+                const subject = urlParams.get('subject') || '';
+                const section = urlParams.get('section') || '';
+
+                if (!subject) {
+                    const container = document.getElementById('question-container');
+                    container.textContent = 'No subject specified in URL.';
+                    return;
+                }
+
+                // Fetch questions from get_exam.php with subject filter
+                const response = await fetch(`get_exam.php?subject=${encodeURIComponent(subject)}`);
+                const data = await response.json();
+                if (data.status === 'success') {
+                    const container = document.getElementById('question-container');
+                    container.innerHTML = '';
+                    if (data.questions.length === 0) {
+                        container.textContent = 'No questions available.';
+                    } else {
+                    data.questions.forEach((question, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'question-item';
+
+                        const label = document.createElement('label');
+                        label.textContent = `Q${index + 1}: ${question.question_text} (Please enter the exact answer as expected)`;
+                        label.setAttribute('for', `answer-${question.id}`);
+
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.id = `answer-${question.id}`;
+                        input.name = `answer-${question.id}`;
+                        input.required = true;
+
+                        div.appendChild(label);
+                        div.appendChild(document.createElement('br'));
+                        div.appendChild(input);
+
+                        container.appendChild(div);
+                    });
+                    }
+                } else {
+                    console.error('Failed to load questions:', data.message);
+                    document.getElementById('feedback').textContent = 'Failed to load questions: ' + data.message;
+                }
+            } catch (error) {
+                console.error('Error fetching questions:', error);
+                document.getElementById('feedback').textContent = 'Error fetching questions: ' + error.message;
+            }
+        }
+
+        document.getElementById('exam-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const answers = {};
+            for (const [key, value] of formData.entries()) {
+                answers[key] = value;
+            }
+
+            try {
+                const response = await fetch('save_student_answers.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ answers, section }),
+                });
+                const result = await response.json();
+                const feedbackDiv = document.getElementById('feedback');
+                if (result.status === 'success') {
+                    feedbackDiv.textContent = `Answers submitted successfully! Your score: ${result.score} out of ${result.total}`;
+
+                    // Show per-question feedback
+                    const container = document.getElementById('question-container');
+                    for (const [key, value] of Object.entries(answers)) {
+                        const input = document.getElementById(key);
+                        if (input) {
+                            // Disable input to prevent changes after submission
+                            input.disabled = true;
+                            // Add feedback span
+                            let feedback = document.createElement('span');
+                            feedback.style.marginLeft = '10px';
+                            // For now, just mark all as submitted; detailed correctness feedback requires backend changes
+                            feedback.textContent = 'Submitted';
+                            input.parentNode.appendChild(feedback);
+                        }
+                    }
+                } else {
+                    feedbackDiv.textContent = 'Failed to submit answers: ' + result.message;
+                }
+            } catch (error) {
+                document.getElementById('feedback').textContent = 'Error submitting answers: ' + error.message;
+            }
+        });
+
+        window.onload = loadQuestions;
+    </script>
+</body>
+</html>
